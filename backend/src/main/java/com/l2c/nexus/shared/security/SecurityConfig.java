@@ -16,14 +16,20 @@ class SecurityConfig {
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/system/ping", "/api/actuator/health/**", "/api/actuator/health")
-                        .permitAll()
-                        .anyRequest().authenticated())
+        http.authorizeHttpRequests(
+                        auth ->
+                                auth.requestMatchers(
+                                                "/api/system/ping",
+                                                "/api/actuator/health/**",
+                                                "/api/actuator/health")
+                                        .permitAll()
+                                        .anyRequest()
+                                        .authenticated())
                 // ADR-0005: unauthenticated requests receive 401, not a login redirect
-                .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)));
+                .exceptionHandling(
+                        ex ->
+                                ex.authenticationEntryPoint(
+                                        new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)));
         return http.build();
     }
 

@@ -9,6 +9,8 @@ The project must use a modern, maintainable, mainstream stack with compatible de
 ## Decision
 **Backend:** Java 21 LTS, Spring Boot 4.1.x (Spring Framework 7, Spring Security 7, Hibernate 7), Maven with the Maven Wrapper, Spring Web, Spring Security, Spring Data JPA, Jakarta Bean Validation, PostgreSQL, Flyway, Actuator, springdoc OpenAPI (a release compatible with Spring Boot 4), JUnit 5, Mockito, Testcontainers.
 
+**Java formatting:** Spotless with google-java-format (AOSP style), checked in CI as part of `mvn verify`. Run `./mvnw spotless:apply` before committing.
+
 **Frontend:** React, TypeScript (strict), Vite, React Router, TanStack Query, React Hook Form with Zod, Tailwind CSS with shadcn/ui, Vitest with Testing Library, ESLint and Prettier. Playwright is added after the MVP workflow is stable.
 
 **Infrastructure:** Docker and Docker Compose, GitHub Actions, Mailpit for local email.

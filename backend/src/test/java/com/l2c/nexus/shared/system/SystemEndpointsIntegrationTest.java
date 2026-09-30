@@ -22,9 +22,8 @@ class SystemEndpointsIntegrationTest {
     private final HttpClient client = HttpClient.newHttpClient();
 
     private HttpResponse<String> get(String path) throws Exception {
-        HttpRequest request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + path))
-                .GET()
-                .build();
+        HttpRequest request =
+                HttpRequest.newBuilder(URI.create("http://localhost:" + port + path)).GET().build();
         return client.send(request, HttpResponse.BodyHandlers.ofString());
     }
 

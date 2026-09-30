@@ -4,14 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.l2c.nexus.TestcontainersConfiguration;
-
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.UUID;
 import javax.sql.DataSource;
-
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -21,15 +19,14 @@ import org.springframework.context.annotation.Import;
 @Import(TestcontainersConfiguration.class)
 class UsersSchemaTest {
 
-    @Autowired
-    private DataSource dataSource;
+    @Autowired private DataSource dataSource;
 
     @Test
     void flywayAppliedTheMigrations() throws SQLException {
-        try (
-                Connection c = dataSource.getConnection();
-                PreparedStatement ps = c.prepareStatement(
-                        "SELECT count(*) FROM flyway_schema_history WHERE success");
+        try (Connection c = dataSource.getConnection();
+                PreparedStatement ps =
+                        c.prepareStatement(
+                                "SELECT count(*) FROM flyway_schema_history WHERE success");
                 ResultSet rs = ps.executeQuery()) {
             rs.next();
             assertThat(rs.getInt(1)).isGreaterThanOrEqualTo(1);
@@ -54,9 +51,10 @@ class UsersSchemaTest {
     }
 
     private void insertUser(String email, String status) throws SQLException {
-        try (
-                Connection c = dataSource.getConnection();
-                PreparedStatement ps = c.prepareStatement("""
+        try (Connection c = dataSource.getConnection();
+                PreparedStatement ps =
+                        c.prepareStatement(
+                                """
                         INSERT INTO users (id, email, password_hash, display_name, status, created_at, updated_at)
                         VALUES (?, ?, 'not-a-real-hash', 'Test User', ?, now(), now())
                         """)) {
