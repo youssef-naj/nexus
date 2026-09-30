@@ -48,5 +48,7 @@ class SystemEndpointsIntegrationTest {
         HttpResponse<String> response = get("/api/orgs");
 
         assertThat(response.statusCode()).isEqualTo(401);
+        assertThat(response.headers().firstValue("Content-Type").orElse(""))
+                .contains("application/problem+json");
     }
 }

@@ -15,6 +15,12 @@ spring:
           time_zone: UTC
   flyway:
     enabled: true
+  task:
+    execution:
+      pool:
+        core-size: 2
+        max-size: 4
+        queue-capacity: 100
 
 management:
   endpoints:
@@ -27,3 +33,7 @@ management:
       show-details: never
       probes:
         enabled: true
+nexus:
+  public-base-url: http://localhost:5173   # override in deployed environments
+  mail:
+    from: noreply@nexus.local

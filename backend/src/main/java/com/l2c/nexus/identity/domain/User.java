@@ -89,4 +89,15 @@ public class User {
     public Instant getUpdatedAt() {
         return updatedAt;
     }
+
+    public boolean isEmailVerified() {
+        return emailVerifiedAt != null;
+    }
+
+    public void markEmailVerified(Instant now) {
+        if (emailVerifiedAt == null) {
+            emailVerifiedAt = now;
+            updatedAt = now;
+        }
+    }
 }
