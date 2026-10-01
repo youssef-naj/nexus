@@ -1,10 +1,18 @@
 package com.l2c.nexus.identity.api;
 
+import com.l2c.nexus.identity.application.AccountService;
 import com.l2c.nexus.identity.application.EmailVerificationService;
 import com.l2c.nexus.identity.application.RegisterUserCommand;
 import com.l2c.nexus.identity.application.RegistrationService;
+import com.l2c.nexus.identity.domain.User;
+import com.l2c.nexus.identity.security.AuthenticatedUser;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.InsufficientAuthenticationException;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -21,10 +29,15 @@ class AuthController {
 
     private final RegistrationService registration;
     private final EmailVerificationService verification;
+    private final AccountService accounts;
 
-    AuthController(RegistrationService registration, EmailVerificationService verification) {
+    AuthController(
+            RegistrationService registration,
+            EmailVerificationService verification,
+            AccountService accounts) {
         this.registration = registration;
         this.verification = verification;
+        this.accounts = accounts;
     }
 
     @PostMapping("/register")
@@ -42,5 +55,23 @@ class AuthController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     void verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
         verification.verify(request.token());
+    }
+
+    /**
+     * The current user, read fresh from the database. If the account was disabled after login, the
+     * session is ended here instead of continuing to work.
+     */
+    @GetMapping("/me")
+    CurrentUserResponse me(
+            @AuthenticationPrincipal AuthenticatedUser principal, HttpServletRequest request) {
+        User user = accounts.findActiveUser(principal.id()).orElse(null);
+        if (user == null) {
+            HttpSession session = request.getSession(false);
+            if (session != null) {
+                session.invalidate();
+            }
+            throw new InsufficientAuthenticationException("Session is no longer valid");
+        }
+        return new CurrentUserResponse(user.getId(), user.getEmail(), user.getDisplayName());
     }
 }

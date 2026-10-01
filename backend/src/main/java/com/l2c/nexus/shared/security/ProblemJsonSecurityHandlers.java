@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 
 /** Writes 401 and 403 as Problem Details. Only fixed text is written, never request data. */
 @Component
-class ProblemJsonSecurityHandlers implements AuthenticationEntryPoint, AccessDeniedHandler {
+public class ProblemJsonSecurityHandlers implements AuthenticationEntryPoint, AccessDeniedHandler {
 
     @Override
     public void commence(

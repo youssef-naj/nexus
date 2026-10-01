@@ -33,9 +33,11 @@ class RegistrationEndpointIntegrationTest {
 
     /** Any request makes the server issue the XSRF-TOKEN cookie, exactly as a browser would. */
     private String csrfToken() throws Exception {
-        client.send(
-                HttpRequest.newBuilder(uri("/api/system/ping")).GET().build(),
-                HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> ping =
+                client.send(
+                        HttpRequest.newBuilder(uri("/api/system/ping")).GET().build(),
+                        HttpResponse.BodyHandlers.ofString());
+        assertThat(ping.statusCode()).isEqualTo(200);
         return cookies.getCookieStore().getCookies().stream()
                 .filter(cookie -> cookie.getName().equals("XSRF-TOKEN"))
                 .findFirst()

@@ -100,4 +100,9 @@ public class User {
             updatedAt = now;
         }
     }
+
+    public void disable(Instant now) {
+        status = UserStatus.DISABLED;
+        updatedAt = now;
+    }
 }
