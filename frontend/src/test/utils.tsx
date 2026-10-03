@@ -1,9 +1,47 @@
 import type { ReactElement } from "react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { render } from "@testing-library/react"
+import { MemoryRouter } from "react-router"
+import { vi } from "vitest"
+
+function newClient() {
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
+}
 
 export function renderWithQuery(ui: ReactElement) {
-  // retry: false so failing requests show their error state immediately in tests
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>)
+  return render(<QueryClientProvider client={newClient()}>{ui}</QueryClientProvider>)
+}
+
+export function renderWithProviders(ui: ReactElement, initialEntries: string[] = ["/"]) {
+  return render(
+    <QueryClientProvider client={newClient()}>
+      <MemoryRouter initialEntries={initialEntries}>{ui}</MemoryRouter>
+    </QueryClientProvider>,
+  )
+}
+
+export function jsonResponse(
+  status: number,
+  body?: unknown,
+  headers: Record<string, string> = {},
+): Response {
+  return new Response(body === undefined ? null : JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json", ...headers },
+  })
+}
+
+/** Stubs fetch with handlers keyed by "METHOD /path" (without the /api prefix). */
+export function mockApi(routes: Record<string, (init?: RequestInit) => Response>) {
+  const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const path = String(input).replace(/^\/api/, "")
+    const key = `${(init?.method ?? "GET").toUpperCase()} ${path}`
+    const handler = routes[key]
+    if (!handler) throw new Error(`Unexpected request: ${key}`)
+    return handler(init)
+  })
+  vi.stubGlobal("fetch", fetchMock)
+  return fetchMock
 }

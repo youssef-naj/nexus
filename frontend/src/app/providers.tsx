@@ -1,9 +1,18 @@
 import type { ReactNode } from "react"
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { Toaster } from "@/components/ui/sonner"
+import { meQueryKey } from "@/features/auth/queries"
 import { ApiError } from "@/shared/api/client"
 
+function handleUnauthorized(error: Error) {
+  if (error instanceof ApiError && error.status === 401) {
+    queryClient.setQueryData(meQueryKey, null)
+  }
+}
+
 const queryClient = new QueryClient({
+  queryCache: new QueryCache({ onError: handleUnauthorized }),
+  mutationCache: new MutationCache({ onError: handleUnauthorized }),
   defaultOptions: {
     queries: {
       staleTime: 30_000,
