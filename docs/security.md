@@ -72,13 +72,19 @@ All errors are Problem Details (RFC 9457, `application/problem+json`), including
 - `.env.example` contains placeholders only.
 - Compose binds PostgreSQL and Mailpit to `127.0.0.1`.
 
-## Authorization [planned]
+## Authorization [built]
 
 Arrives with Phases 3 and 4:
 
 - Tenant endpoints live under `/api/orgs/{orgId}/...`. A single membership gate resolves `(user, orgId)` to an active membership. No membership means `404`; a member lacking permission gets `403` (ADR-0005).
 - Roles map to permissions in one policy class (ADR-0007). The role-to-permission matrix will be documented here once it exists.
 - Every tenant endpoint will have cross-tenant negative tests.
+
+| Permission | Owner | Admin | Manager | Employee |
+|---|---|---|---|---|
+| ORGANIZATION_VIEW, MEMBER_VIEW, DEPARTMENT_VIEW, REQUEST_CREATE | yes | yes | yes | yes |
+| REQUEST_VIEW_ALL, REQUEST_REVIEW | yes | yes | yes | no |
+| ORGANIZATION_UPDATE, MEMBER_INVITE, MEMBER_REVOKE, ROLE_ASSIGN, DEPARTMENT_MANAGE, AUDIT_VIEW | yes | yes | no | no |
 
 ## Known limitations and remaining security work
 

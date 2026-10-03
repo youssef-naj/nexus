@@ -115,4 +115,17 @@ public class OrganizationService {
         }
         throw new IllegalStateException("Could not find a free slug for " + base);
     }
+
+    @Transactional(readOnly = true)
+    public OrganizationInfo info(UUID organizationId) {
+        Organization org =
+                organizations
+                        .findById(organizationId)
+                        .orElseThrow(
+                                () ->
+                                        new IllegalStateException(
+                                                "Organization vanished after the gate: "
+                                                        + organizationId));
+        return new OrganizationInfo(org.getId(), org.getName(), org.getSlug(), org.getStatus());
+    }
 }

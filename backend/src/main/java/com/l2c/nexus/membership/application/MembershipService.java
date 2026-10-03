@@ -6,6 +6,7 @@ import com.l2c.nexus.membership.domain.OrgRole;
 import com.l2c.nexus.membership.persistence.MembershipRepository;
 import java.time.Clock;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,5 +43,13 @@ public class MembershipService {
                 membership.getOrganizationId(),
                 membership.getUserId(),
                 membership.getRole());
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<MembershipView> findActiveMembership(UUID organizationId, UUID userId) {
+        return memberships
+                .findByOrganizationIdAndUserIdAndStatus(
+                        organizationId, userId, MembershipStatus.ACTIVE)
+                .map(MembershipService::view);
     }
 }

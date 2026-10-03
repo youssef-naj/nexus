@@ -100,4 +100,20 @@ public class HttpTestClient {
             throw new IllegalStateException(e);
         }
     }
+
+    /** Any method with an optional JSON body, for tests that walk over arbitrary routes. */
+    public HttpResponse<String> request(String method, String path, String jsonBody, String csrf) {
+        HttpRequest.BodyPublisher body =
+                jsonBody == null
+                        ? HttpRequest.BodyPublishers.noBody()
+                        : HttpRequest.BodyPublishers.ofString(jsonBody);
+        HttpRequest.Builder request = HttpRequest.newBuilder(uri(path)).method(method, body);
+        if (jsonBody != null) {
+            request.header("Content-Type", "application/json");
+        }
+        if (csrf != null) {
+            request.header("X-XSRF-TOKEN", csrf);
+        }
+        return send(request.build());
+    }
 }
