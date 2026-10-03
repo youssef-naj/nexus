@@ -2,26 +2,28 @@
 
 A multi-tenant **Business Operations SaaS** platform. Independent organizations share one application and manage their members, departments, internal service requests, approval workflows and audit history, with **strict tenant isolation**: a user of Organization A can never access Organization B's private data.
 
-> **Status: Phase 1 complete (development foundation).** The project builds, migrates its database, runs its tests in CI, and serves one end-to-end slice. Business features (authentication, organizations, requests, approvals) are **not implemented yet**. See [Status and roadmap](#status-and-roadmap).
+> **Status: Phase 2 complete (identity and authentication).** You can register, verify your email, sign in and out. Organizations, tenant isolation and the business features are **not implemented yet**. See [Status and roadmap](#status-and-roadmap).
 
 ## What exists today
 
-- Spring Boot backend with PostgreSQL, Flyway migrations, deny-by-default security, a health endpoint and a ping endpoint.
-- React + TypeScript frontend that calls the backend through a dev proxy and shows its status.
-- Integration tests against a real PostgreSQL (Testcontainers), frontend unit tests, formatting and lint checks.
+- Registration with email verification (emails readable locally in Mailpit), login, logout and a current-user endpoint.
+- Server-side sessions in PostgreSQL, CSRF protection, rate limiting, Problem Details errors.
+- React + TypeScript frontend: register, verify-email and sign-in pages, a protected layout with sign out.
+- Integration tests against a real PostgreSQL (Testcontainers), frontend component tests, formatting and lint checks.
 - GitHub Actions CI and Dependabot.
 - Architecture decision records (ADRs) for the main design choices.
 
 ## Planned features (MVP)
 
-Identity and authentication, organizations and memberships with role-based access, invitations, departments, internal service requests, an approval workflow (draft, submit, approve, reject, request changes), audit history, and an organization dashboard. See [docs/architecture.md](docs/architecture.md) and [docs/decisions](docs/decisions/README.md).
+Organizations and memberships with role-based access, invitations, departments, internal service requests, an approval workflow (draft, submit, approve, reject, request changes), audit history, and an organization dashboard. See [docs/architecture.md](docs/architecture.md) and [docs/decisions](docs/decisions/README.md).
 
 ## Tech stack
 
 | Area | Choice |
 |---|---|
-| Backend | Java 21, Spring Boot 4.1, Spring Security, Spring Data JPA (Hibernate), Flyway, Actuator, springdoc OpenAPI |
+| Backend | Java 21, Spring Boot 4.1, Spring Security, Spring Session (JDBC), Spring Data JPA (Hibernate), Flyway, Actuator, springdoc OpenAPI |
 | Database | PostgreSQL 17 |
+| Local email | Mailpit |
 | Frontend | React, TypeScript (strict), Vite, React Router, TanStack Query, React Hook Form, Zod, Tailwind CSS, shadcn/ui |
 | Testing | JUnit 5, Testcontainers, Vitest, Testing Library |
 | Quality | Spotless (google-java-format, AOSP style), ESLint, Prettier, GitHub Actions, Dependabot |
@@ -37,8 +39,6 @@ Architecture is a **modular monolith**, not microservices (see [ADR-0001](docs/d
 - **Git**
 
 Maven is not needed separately. The Maven Wrapper is included.
-
-Check your tools (PowerShell):
 
 ```powershell
 java -version
@@ -57,7 +57,7 @@ cd nexus
 Copy-Item .env.example .env
 notepad .env          # set POSTGRES_PASSWORD to any local value
 
-# 2. Database
+# 2. Database and local mail server
 docker compose up -d
 docker compose ps     # postgres should report "healthy"
 
@@ -71,7 +71,7 @@ npm ci
 npm run dev
 ```
 
-Open <http://localhost:5173>. You should see the Nexus card with a **Backend ok** badge.
+Open <http://localhost:5173>. You land on the sign-in page.
 
 <details>
 <summary>macOS / Linux equivalents</summary>
@@ -85,15 +85,25 @@ docker compose up -d
 
 </details>
 
-### Useful endpoints
+### Try the sign-up flow
+
+1. On <http://localhost:5173>, choose **Create one** and register (password of at least 12 characters).
+2. Open Mailpit at <http://localhost:8025> and open the verification email.
+3. Click the link, then **Confirm email**.
+4. Sign in. You reach the dashboard. **Sign out** returns you to the sign-in page.
+
+There are no pre-created demo accounts yet; demo data arrives with the phases that need it.
+
+### Useful URLs
 
 | URL | Purpose |
 |---|---|
 | `http://localhost:5173` | Frontend |
+| `http://localhost:8025` | Mailpit (read local emails) |
 | `http://localhost:8080/api/system/ping` | Public ping |
 | `http://localhost:8080/api/actuator/health` | Health check |
 
-Every other endpoint currently returns `401` (deny by default).
+Every other API endpoint requires authentication.
 
 ### Configuration
 
@@ -128,16 +138,27 @@ npm run build
 
 CI runs the same commands for every push and pull request.
 
+## Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| `JAVA_HOME environment variable is not defined correctly` | Point `JAVA_HOME` at the JDK folder that contains `bin\javac.exe`, then open a new terminal. |
+| Docker error: port 5432 not available, or Flyway says the schema is non-empty without a history table | Another PostgreSQL is using port 5432 (often a locally installed one), so the app talked to the wrong database. Set `POSTGRES_PORT=5433` in `.env`, run `docker compose up -d`, and restart the backend. |
+| `password authentication failed` | The database volume was created with another password. Run `docker compose down -v` (deletes local data), then `docker compose up -d`. |
+| `Failed to configure a DataSource` when running from IntelliJ | The Maven project was not imported (right-click `backend/pom.xml` and choose Add as Maven Project), or the working directory is not `backend`. |
+| Sign-in returns `403` | The CSRF cookie is missing. Reload the page and retry. |
+| `429 Too many attempts` | Rate limit reached. Wait for the time shown, or restart the backend to clear the in-memory counters. |
+
 ## Project structure
 
 ```
 nexus/
 ├─ backend/     Spring Boot application (package com.l2c.nexus)
 ├─ frontend/    React + TypeScript application
-├─ docs/        Architecture, data model, decision records
+├─ docs/        Architecture, data model, security, decision records
 ├─ infra/       Reserved for deployment assets
 ├─ .github/     CI workflow and Dependabot configuration
-├─ compose.yaml Local PostgreSQL
+├─ compose.yaml Local PostgreSQL and Mailpit
 └─ .env.example Configuration template
 ```
 
@@ -145,6 +166,7 @@ nexus/
 
 - [Architecture](docs/architecture.md)
 - [Data model](docs/data-model.md)
+- [Security](docs/security.md)
 - [Architecture decision records](docs/decisions/README.md)
 
 ## Status and roadmap
@@ -153,8 +175,8 @@ nexus/
 |---|---|---|
 | 0 | Requirements and architecture | Done |
 | 1 | Development foundation, CI, first vertical slice | Done |
-| 2 | Identity and authentication | Next |
-| 3 | Organizations and tenant isolation | Planned |
+| 2 | Identity and authentication | Done |
+| 3 | Organizations and tenant isolation | Next |
 | 4 | Memberships, invitations, roles | Planned |
 | 5 | Departments and service requests | Planned |
 | 6 | Approval workflow and audit history | Planned |
@@ -164,9 +186,10 @@ nexus/
 
 ## Known limitations
 
-- No authentication or business features yet. The API is deny-by-default except ping and health.
-- Swagger UI and `/v3/api-docs` are enabled by the springdoc default but are not reachable without authentication. Their exposure policy will be defined per profile.
-- No demo accounts, seed data, screenshots or deployment guide yet. They arrive with the phases that need them.
+- No organizations, tenant isolation or business features yet. See [docs/security.md](docs/security.md) for the full, honest list of remaining security work.
+- No password reset, MFA, or "sign out everywhere".
+- Rate limiting is per application instance and in memory.
+- No demo accounts, screenshots or deployment guide yet.
 - Not production-ready. Nothing here has been security-reviewed or deployed.
 
 ## License
