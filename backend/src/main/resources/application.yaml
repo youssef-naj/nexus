@@ -50,3 +50,9 @@ nexus:
   public-base-url: http://localhost:5173   # override in deployed environments
   mail:
     from: noreply@nexus.local
+  rate-limit:
+    login-per-ip: { limit: 30, window: 5m }
+    login-failures-per-account: { limit: 5, window: 15m }   # per email + IP
+    register-per-ip: { limit: 10, window: 1h }
+    verify-per-ip: { limit: 30, window: 10m }
+    email-per-address: { limit: 3, window: 1h }

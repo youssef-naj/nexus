@@ -1,0 +1,7 @@
+nexus:
+  rate-limit:
+    login-per-ip: { limit: 100000, window: 1m }
+    login-failures-per-account: { limit: 100000, window: 1m }
+    register-per-ip: { limit: 100000, window: 1m }
+    verify-per-ip: { limit: 100000, window: 1m }
+    email-per-address: { limit: 100000, window: 1m }

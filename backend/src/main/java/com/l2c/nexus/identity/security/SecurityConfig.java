@@ -1,5 +1,7 @@
 package com.l2c.nexus.identity.security;
 
+import com.l2c.nexus.identity.application.AuthRateLimits;
+import com.l2c.nexus.shared.ratelimit.RateLimiter;
 import com.l2c.nexus.shared.security.ProblemJsonSecurityHandlers;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -9,6 +11,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
+import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.savedrequest.NullRequestCache;
 
 @Configuration
@@ -20,12 +23,19 @@ class SecurityConfig {
             HttpSecurity http,
             ProblemJsonSecurityHandlers problemHandlers,
             LoginResponseHandlers loginHandlers,
-            NexusAuthenticationProvider authenticationProvider)
+            NexusAuthenticationProvider authenticationProvider,
+            LoginThrottle loginThrottle,
+            RateLimiter rateLimiter,
+            AuthRateLimits rateLimits)
             throws Exception {
         http
                 // Cookie-to-header CSRF tokens for the SPA (XSRF-TOKEN cookie, X-XSRF-TOKEN header)
                 .csrf(csrf -> csrf.spa())
                 .authenticationProvider(authenticationProvider)
+                // First in the chain: abusive requests are rejected before any expensive work
+                .addFilterBefore(
+                        new AuthRateLimitFilter(loginThrottle, rateLimiter, rateLimits),
+                        CsrfFilter.class)
                 .authorizeHttpRequests(
                         auth ->
                                 auth.requestMatchers(

@@ -50,4 +50,14 @@ public class RecordingAccountEmails implements AccountEmails {
             throw new AssertionError("Interrupted while waiting for an email", e);
         }
     }
+
+    /** Waits up to the given time and returns the next email, or null if none arrives. */
+    public Sent pollWithin(String to, long millis) {
+        try {
+            return queue(to).poll(millis, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new AssertionError("Interrupted while waiting for an email", e);
+        }
+    }
 }

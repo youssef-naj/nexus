@@ -3,6 +3,7 @@ package com.l2c.nexus.identity.security;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.InternalAuthenticationServiceException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -25,11 +26,18 @@ class LoginResponseHandlers implements AuthenticationSuccessHandler, Authenticat
             "{\"type\":\"about:blank\",\"title\":\"Internal server error\",\"status\":500,"
                     + "\"detail\":\"An unexpected error occurred.\"}";
 
+    private final LoginThrottle throttle;
+
+    LoginResponseHandlers(LoginThrottle throttle) {
+        this.throttle = throttle;
+    }
+
     @Override
     public void onAuthenticationSuccess(
             HttpServletRequest request,
             HttpServletResponse response,
             Authentication authentication) {
+        throttle.recordSuccess(request.getParameter("email"), request.getRemoteAddr());
         response.setStatus(HttpServletResponse.SC_NO_CONTENT);
     }
 
@@ -40,10 +48,14 @@ class LoginResponseHandlers implements AuthenticationSuccessHandler, Authenticat
             AuthenticationException exception)
             throws IOException {
         if (exception instanceof EmailNotVerifiedException) {
+            throttle.recordFailure(request.getParameter("email"), request.getRemoteAddr());
             write(response, 403, UNVERIFIED);
         } else if (exception instanceof InternalAuthenticationServiceException) {
             write(response, 500, SERVER_ERROR);
         } else {
+            if (exception instanceof BadCredentialsException) {
+                throttle.recordFailure(request.getParameter("email"), request.getRemoteAddr());
+            }
             write(response, 401, INVALID);
         }
     }
