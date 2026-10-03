@@ -131,7 +131,7 @@ erDiagram
 | `department_memberships` | Assigns members to departments within one organization. | Planned (Phase 5) |
 | `service_requests` | The business object that moves through the approval workflow. | Planned (Phase 5) |
 | `request_events` | Append-only history of each request transition. | Planned (Phase 6) |
-| `audit_logs` | Append-only security and business event trail. | Planned (Phase 6) |
+| `audit_logs` | Append-only security and business event trail. | Implemented (V4) |
 
 ## Key design decisions
 
@@ -170,7 +170,7 @@ Indexes are added only for a named query. Planned ones must be verified with `EX
 | `service_requests` | index `(organization_id, created_by_membership_id, created_at DESC)` | "My requests" for employees. |
 | `service_requests` | index `(organization_id, assignee_membership_id)` | "Assigned to me". |
 | `request_events` | index `(request_id, occurred_at)` | Request history timeline. |
-| `audit_logs` | index `(organization_id, occurred_at DESC)` | Organization audit view. |
+| `audit_logs` | index `ix_audit_logs_org_time` | Organization audit view. Append-only enforced by triggers; no foreign keys; allow-listed metadata. |
 
 ## Request reference numbers
 

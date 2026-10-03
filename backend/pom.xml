@@ -15,6 +15,12 @@
 	<version>0.0.1-SNAPSHOT</version>
 	<name>Nexus Backend</name>
 	<description>Multi-tenant business operations platform - backend</description>
+	<licenses>
+		<license>
+			<name>MIT License</name>
+			<url>https://opensource.org/licenses/MIT</url>
+		</license>
+	</licenses>
 
 	<properties>
 		<java.version>21</java.version>

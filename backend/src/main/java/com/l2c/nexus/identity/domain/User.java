@@ -94,11 +94,14 @@ public class User {
         return emailVerifiedAt != null;
     }
 
-    public void markEmailVerified(Instant now) {
-        if (emailVerifiedAt == null) {
-            emailVerifiedAt = now;
-            updatedAt = now;
+    /** Returns true if the address was newly verified, false if it already was. */
+    public boolean markEmailVerified(Instant now) {
+        if (emailVerifiedAt != null) {
+            return false;
         }
+        emailVerifiedAt = now;
+        updatedAt = now;
+        return true;
     }
 
     public void disable(Instant now) {

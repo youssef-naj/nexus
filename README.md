@@ -194,4 +194,4 @@ nexus/
 
 ## License
 
-To be decided. Until a `LICENSE` file is added, all rights are reserved.
+[MIT](LICENSE)

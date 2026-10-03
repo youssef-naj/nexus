@@ -1,5 +1,9 @@
 package com.l2c.nexus.identity.application;
 
+import com.l2c.nexus.audit.application.AuditEvent;
+import com.l2c.nexus.audit.application.AuditEventType;
+import com.l2c.nexus.audit.application.AuditService;
+import com.l2c.nexus.audit.application.AuditTargetType;
 import com.l2c.nexus.identity.domain.TokenType;
 import com.l2c.nexus.identity.domain.User;
 import com.l2c.nexus.identity.domain.UserToken;
@@ -20,16 +24,19 @@ public class EmailVerificationService {
     private final UserRepository users;
     private final UserTokenRepository tokens;
     private final TokenGenerator generator;
+    private final AuditService audit;
     private final Clock clock;
 
     public EmailVerificationService(
             UserRepository users,
             UserTokenRepository tokens,
             TokenGenerator generator,
+            AuditService audit,
             Clock clock) {
         this.users = users;
         this.tokens = tokens;
         this.generator = generator;
+        this.audit = audit;
         this.clock = clock;
     }
 
@@ -57,11 +64,19 @@ public class EmailVerificationService {
                         .filter(t -> t.getType() == TokenType.VERIFY_EMAIL)
                         .orElseThrow(InvalidTokenException::new);
 
-        // One atomic statement decides who wins; unused and unexpired, or nothing.
+        // One atomic statement decides who wins: unused and unexpired, or nothing.
         if (tokens.markUsed(token.getId(), now) != 1) {
             throw new InvalidTokenException();
         }
         User user = users.findById(token.getUserId()).orElseThrow(InvalidTokenException::new);
-        user.markEmailVerified(now);
+        if (user.markEmailVerified(now)) {
+            // Same transaction as the change: both are committed, or neither is.
+            audit.record(
+                    AuditEvent.of(
+                            AuditEventType.USER_EMAIL_VERIFIED,
+                            user.getId(),
+                            AuditTargetType.USER,
+                            user.getId()));
+        }
     }
 }

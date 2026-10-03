@@ -18,7 +18,7 @@ This document describes what the code does today, not what we hope it does. Deci
 | Email bombing | Per-IP registration limit and a silent per-address email limit | [built] |
 | Secrets in the repository | `.env` ignored, placeholders in `.env.example`, no hard-coded credentials | [built] |
 | Vulnerable dependencies | Dependabot, `npm audit` in CI | [built] (Maven scan planned, Phase 8) |
-| Audit tampering | Append-only audit log with restricted database privileges (ADR-0012) | [planned] Phase 6 |
+| Audit tampering | Append-only audit log with restricted database privileges (ADR-0012). Audit protection relies on database triggers; a database owner can still remove them. | [built, partial] (triggers; restricted DB role is Phase 9) |
 | Platform admin over-reach | Platform endpoints expose metadata only (ADR-0006) | [planned] |
 
 ## Authentication [built]
