@@ -1,5 +1,6 @@
 package com.l2c.nexus.identity.security;
 
+import com.l2c.nexus.identity.application.AccountService;
 import com.l2c.nexus.identity.application.AuthRateLimits;
 import com.l2c.nexus.shared.ratelimit.RateLimiter;
 import com.l2c.nexus.shared.security.ProblemJsonSecurityHandlers;
@@ -10,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
 import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.savedrequest.NullRequestCache;
@@ -26,7 +28,8 @@ class SecurityConfig {
             NexusAuthenticationProvider authenticationProvider,
             LoginThrottle loginThrottle,
             RateLimiter rateLimiter,
-            AuthRateLimits rateLimits)
+            AuthRateLimits rateLimits,
+            AccountService accountService)
             throws Exception {
         http
                 // Cookie-to-header CSRF tokens for the SPA (XSRF-TOKEN cookie, X-XSRF-TOKEN header)
@@ -36,6 +39,8 @@ class SecurityConfig {
                 .addFilterBefore(
                         new AuthRateLimitFilter(loginThrottle, rateLimiter, rateLimits),
                         CsrfFilter.class)
+                // Re-checks the account on every authenticated request, just before authorization
+                .addFilterBefore(new ActiveAccountFilter(accountService), AuthorizationFilter.class)
                 .authorizeHttpRequests(
                         auth ->
                                 auth.requestMatchers(
