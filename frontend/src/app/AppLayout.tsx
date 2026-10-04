@@ -1,4 +1,5 @@
-import { Outlet } from "react-router"
+import { Link, Outlet } from "react-router"
+import { OrgSwitcher } from "@/app/OrgSwitcher"
 import { Button } from "@/components/ui/button"
 import { useCurrentUser, useLogout } from "@/features/auth/queries"
 
@@ -16,7 +17,12 @@ export function AppLayout() {
       </a>
       <header className="border-b">
         <div className="mx-auto flex max-w-5xl items-center justify-between p-4">
-          <span className="text-lg font-semibold">Nexus</span>
+          <div className="flex items-center gap-3">
+            <Link to="/" className="text-lg font-semibold">
+              Nexus
+            </Link>
+            <OrgSwitcher />
+          </div>
           <div className="flex items-center gap-3">
             {user && <span className="text-sm text-muted-foreground">{user.displayName}</span>}
             <Button

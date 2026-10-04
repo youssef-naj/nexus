@@ -14,6 +14,7 @@ describe("AppLayout", () => {
       "GET /auth/me": () =>
         jsonResponse(200, { id: "1", email: "ada@example.com", displayName: "Ada" }),
       "POST /auth/logout": () => jsonResponse(204),
+      "GET /orgs": () => jsonResponse(200, []),
     })
     renderWithProviders(
       <Routes>

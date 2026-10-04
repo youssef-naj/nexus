@@ -1,0 +1,16 @@
+export const PERMISSIONS = [
+  "ORGANIZATION_VIEW",
+  "ORGANIZATION_UPDATE",
+  "MEMBER_VIEW",
+  "MEMBER_INVITE",
+  "MEMBER_REVOKE",
+  "ROLE_ASSIGN",
+  "DEPARTMENT_VIEW",
+  "DEPARTMENT_MANAGE",
+  "REQUEST_CREATE",
+  "REQUEST_VIEW_ALL",
+  "REQUEST_REVIEW",
+  "AUDIT_VIEW",
+] as const
+
+export type Permission = (typeof PERMISSIONS)[number]
