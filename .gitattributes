@@ -1,2 +1,14 @@
-/mvnw text eol=lf
+# Keep every text file LF in the repository *and* in the working tree, so
+# Prettier, ESLint and Spotless see identical bytes on Windows, Linux and macOS.
+#
+# Prettier's default endOfLine is "lf". With core.autocrlf=true and no attribute
+# here, a fresh Windows checkout produced CRLF, which made "npm run format:check"
+# fail for files that pass on Linux CI. eol=lf removes that platform difference.
+* text=auto eol=lf
+
+# Windows batch files must keep CRLF.
 *.cmd text eol=crlf
+*.bat text eol=crlf
+
+# The Maven wrapper is executed directly by the shell: LF, never CRLF.
+/mvnw text eol=lf
