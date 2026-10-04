@@ -126,7 +126,7 @@ erDiagram
 | `user_tokens` | Single-use email verification and password reset tokens (hash only). | Planned (Phase 2) |
 | `organizations` | Tenants. Holds the per-organization request counter. | Planned (Phase 3) |
 | `memberships` | A user's role in one organization. One row per (organization, user). Never deleted, only `REVOKED`. | Planned (Phase 3) |
-| `invitations` | Pending, accepted, rejected or revoked invitations (token hash only). | Planned (Phase 4) |
+| `invitations` | Pending, accepted, rejected or revoked invitations (token hash only). | Implemented (V6) |
 | `departments` | Organization-scoped groupings, deactivated rather than deleted. | Planned (Phase 5) |
 | `department_memberships` | Assigns members to departments within one organization. | Planned (Phase 5) |
 | `service_requests` | The business object that moves through the approval workflow. | Planned (Phase 5) |
@@ -146,6 +146,8 @@ erDiagram
 **Emails are unique ignoring case** through a unique index on `lower(email)`.
 
 **Status values** are text with CHECK constraints, not database enum types, so adding a value is a simple migration.
+
+**The first composite foreign key** `(fk_invitations_inviter)` is live and tested.
 
 ## Constraints and indexes
 

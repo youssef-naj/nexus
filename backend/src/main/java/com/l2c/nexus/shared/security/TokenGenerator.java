@@ -1,4 +1,4 @@
-package com.l2c.nexus.identity.application;
+package com.l2c.nexus.shared.security;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;

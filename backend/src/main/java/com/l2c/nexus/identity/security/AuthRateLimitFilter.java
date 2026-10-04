@@ -52,6 +52,8 @@ class AuthRateLimitFilter extends OncePerRequestFilter {
                     limiter.tryAcquire("register:ip:" + ip, rules.registerPerIp());
             case "/api/auth/verify-email" ->
                     limiter.tryAcquire("verify:ip:" + ip, rules.verifyPerIp());
+            case "/api/invitations/preview", "/api/invitations/accept", "/api/invitations/reject" ->
+                    limiter.tryAcquire("invite-token:ip:" + ip, rules.verifyPerIp());
             default -> RateLimitDecision.ALLOWED;
         };
     }

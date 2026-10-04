@@ -56,3 +56,4 @@ nexus:
     register-per-ip: { limit: 10, window: 1h }
     verify-per-ip: { limit: 30, window: 10m }
     email-per-address: { limit: 3, window: 1h }
+    invite-per-org: { limit: 20, window: 1h }

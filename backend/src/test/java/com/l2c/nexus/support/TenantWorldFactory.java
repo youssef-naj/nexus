@@ -47,6 +47,7 @@ public class TenantWorldFactory {
 
     public TenantWorld create(int port) {
         Member alice = signUp("alice", port);
+        Member ann = signUp("ann", port);
         Member dan = signUp("dan", port);
         Member carol = signUp("carol", port);
         Member frank = signUp("frank", port);
@@ -54,12 +55,14 @@ public class TenantWorldFactory {
         Member erin = signUp("erin", port);
 
         MyOrganization orgA = organizations.create(alice.userId(), "Org A " + suffix());
+        memberships.addMember(orgA.id(), ann.userId(), OrgRole.ADMIN);
         memberships.addMember(orgA.id(), dan.userId(), OrgRole.MANAGER);
         memberships.addMember(orgA.id(), carol.userId(), OrgRole.EMPLOYEE);
         memberships.addMember(orgA.id(), frank.userId(), OrgRole.EMPLOYEE);
         MyOrganization orgB = organizations.create(bob.userId(), "Org B " + suffix());
 
-        return new TenantWorld(port, orgA.id(), orgB.id(), alice, dan, carol, frank, bob, erin);
+        return new TenantWorld(
+                port, orgA.id(), orgB.id(), alice, ann, dan, carol, frank, bob, erin);
     }
 
     private Member signUp(String label, int port) {

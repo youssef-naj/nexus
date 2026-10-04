@@ -59,6 +59,13 @@ public class Membership {
         return membership;
     }
 
+    /** A revoked member rejoins: the same row is reused, with the new role. */
+    public void reactivate(OrgRole newRole, Instant now) {
+        this.role = newRole;
+        this.status = MembershipStatus.ACTIVE;
+        this.updatedAt = now;
+    }
+
     public UUID getId() {
         return id;
     }

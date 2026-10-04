@@ -86,6 +86,12 @@ Arrives with Phases 3 and 4:
 | REQUEST_VIEW_ALL, REQUEST_REVIEW | yes | yes | yes | no |
 | ORGANIZATION_UPDATE, MEMBER_INVITE, MEMBER_REVOKE, ROLE_ASSIGN, DEPARTMENT_MANAGE, AUDIT_VIEW | yes | yes | no | no |
 
+
+## Invitations [built]
+
+
+
+
 ## Known limitations and remaining security work
 
 Honest list, in rough priority order:
@@ -102,5 +108,6 @@ Honest list, in rough priority order:
 10. **OpenAPI exposure:** springdoc endpoints are present but reachable only after authentication; their per-environment policy is undecided.
 11. **No row-level security** yet; planned as defense in depth (Phase 8).
 12. **No Maven vulnerability scan** in CI yet.
+13. Invitation emails are fire-and-forget; invitees without an account must register first.
 
 Nothing here has had an external security review. This project should not be treated as production-ready.

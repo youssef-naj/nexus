@@ -5,6 +5,7 @@ import com.l2c.nexus.membership.domain.MembershipStatus;
 import com.l2c.nexus.membership.domain.OrgRole;
 import com.l2c.nexus.membership.persistence.MembershipRepository;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -51,5 +52,28 @@ public class MembershipService {
                 .findByOrganizationIdAndUserIdAndStatus(
                         organizationId, userId, MembershipStatus.ACTIVE)
                 .map(MembershipService::view);
+    }
+
+    /** Adds the user, or reactivates their revoked membership. Fails if already active. */
+    @Transactional
+    public MembershipView addOrReactivate(UUID organizationId, UUID userId, OrgRole role) {
+        Instant now = clock.instant();
+        Membership membership =
+                memberships
+                        .findByOrganizationIdAndUserId(organizationId, userId)
+                        .map(
+                                existing -> {
+                                    if (existing.getStatus() == MembershipStatus.ACTIVE) {
+                                        throw new IllegalStateException("Already an active member");
+                                    }
+                                    existing.reactivate(role, now);
+                                    return existing;
+                                })
+                        .orElseGet(
+                                () ->
+                                        memberships.save(
+                                                Membership.create(
+                                                        organizationId, userId, role, now)));
+        return view(membership);
     }
 }

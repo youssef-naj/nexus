@@ -8,7 +8,11 @@ import java.util.Set;
  */
 public enum AuditEventType {
     USER_EMAIL_VERIFIED(),
-    ORGANIZATION_CREATED("name", "slug");
+    ORGANIZATION_CREATED("name", "slug"),
+    INVITATION_CREATED("role"),
+    INVITATION_REVOKED("role"),
+    INVITATION_ACCEPTED("role"),
+    INVITATION_REJECTED("role");
 
     private final Set<String> allowedMetadataKeys;
 

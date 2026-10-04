@@ -9,6 +9,7 @@ import com.l2c.nexus.identity.domain.User;
 import com.l2c.nexus.identity.domain.UserToken;
 import com.l2c.nexus.identity.persistence.UserRepository;
 import com.l2c.nexus.identity.persistence.UserTokenRepository;
+import com.l2c.nexus.shared.security.TokenGenerator;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;

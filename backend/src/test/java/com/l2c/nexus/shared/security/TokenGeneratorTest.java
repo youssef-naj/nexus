@@ -1,4 +1,4 @@
-package com.l2c.nexus.identity.application;
+package com.l2c.nexus.shared.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

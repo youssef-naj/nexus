@@ -26,6 +26,7 @@ flowchart LR
             REQ["request + approval [planned]"]
             AUD["audit [planned]"]
             DASH["dashboard [planned]"]
+            TEM["team [built]"]
         end
         AZ["Membership gate + permission policy [planned]"]
     end
@@ -37,6 +38,7 @@ flowchart LR
     Modules --> DB
     ID -. emails .-> MAIL
     MEM -. emails .-> MAIL
+    TEM -. emails .-> MAIL
 ```
 
 ## Backend
