@@ -2,20 +2,24 @@
 
 A multi-tenant **Business Operations SaaS** platform. Independent organizations share one application and manage their members, departments, internal service requests, approval workflows and audit history, with **strict tenant isolation**: a user of Organization A can never access Organization B's private data.
 
-> **Status: Phase 2 complete (identity and authentication).** You can register, verify your email, sign in and out. Organizations, tenant isolation and the business features are **not implemented yet**. See [Status and roadmap](#status-and-roadmap).
+> **Status: Phase 4 complete (identity, organizations, tenant isolation, memberships and invitations).** You can register, verify your email, sign in, create organizations, switch between them, invite people by email under role rules, and every tenant request is authorized against an active membership. Departments and the request/approval workflow are **not implemented yet**. See [Status and roadmap](#status-and-roadmap).
 
 ## What exists today
 
 - Registration with email verification (emails readable locally in Mailpit), login, logout and a current-user endpoint.
 - Server-side sessions in PostgreSQL, CSRF protection, rate limiting, Problem Details errors.
-- React + TypeScript frontend: register, verify-email and sign-in pages, a protected layout with sign out.
-- Integration tests against a real PostgreSQL (Testcontainers), frontend component tests, formatting and lint checks.
+- Organizations and memberships: create an organization (you become its owner), list the organizations you belong to, and four roles checked through a single permission policy.
+- **Tenant isolation enforced twice.** Every `/api/orgs/{orgId}/...` request passes one membership gate that resolves the caller's *active* membership before any controller runs, and tenant tables carry composite foreign keys, so a row cannot reference another organization's member even if application code is wrong.
+- Invitations with hashed single-use tokens, role-grant rules, expiry and an acceptance flow.
+- An append-only audit log written inside the business transaction.
+- React + TypeScript frontend: auth pages, an organization selector, and a tenant-aware protected layout.
+- Integration tests against a real PostgreSQL (Testcontainers), a cross-tenant test harness, frontend component tests, formatting and lint checks.
 - GitHub Actions CI and Dependabot.
 - Architecture decision records (ADRs) for the main design choices.
 
 ## Planned features (MVP)
 
-Organizations and memberships with role-based access, invitations, departments, internal service requests, an approval workflow (draft, submit, approve, reject, request changes), audit history, and an organization dashboard. See [docs/architecture.md](docs/architecture.md) and [docs/decisions](docs/decisions/README.md).
+Departments, internal service requests, an approval workflow (draft, submit, approve, reject, request changes), and an organization dashboard with tenant-scoped counts. See [docs/architecture.md](docs/architecture.md) and [docs/decisions](docs/decisions/README.md).
 
 ## Tech stack
 
@@ -176,9 +180,9 @@ nexus/
 | 0 | Requirements and architecture | Done |
 | 1 | Development foundation, CI, first vertical slice | Done |
 | 2 | Identity and authentication | Done |
-| 3 | Organizations and tenant isolation | Next |
-| 4 | Memberships, invitations, roles | Planned |
-| 5 | Departments and service requests | Planned |
+| 3 | Organizations and tenant isolation | Done |
+| 4 | Memberships, invitations, roles | Done |
+| 5 | Departments and service requests | Next |
 | 6 | Approval workflow and audit history | Planned |
 | 7 | React dashboard and user experience | Planned |
 | 8 | Security hardening and testing | Planned |
@@ -186,9 +190,11 @@ nexus/
 
 ## Known limitations
 
-- No organizations, tenant isolation or business features yet. See [docs/security.md](docs/security.md) for the full, honest list of remaining security work.
-- No password reset, MFA, or "sign out everywhere".
+- Departments, service requests and the approval workflow are not implemented yet.
+- Invitation acceptance does not re-check the inviter's authority, and the last-owner invariant promised by ADR-0007 is not implemented. Both are latent today (there is no member-removal or role-change endpoint yet) and must land with member management. See [docs/security.md](docs/security.md).
+- No password reset, password change, MFA, or "sign out everywhere".
 - Rate limiting is per application instance and in memory.
+- Row-level security, a security-header review and a Maven vulnerability scan are still ahead (Phase 8).
 - No demo accounts, screenshots or deployment guide yet.
 - Not production-ready. Nothing here has been security-reviewed or deployed.
 
