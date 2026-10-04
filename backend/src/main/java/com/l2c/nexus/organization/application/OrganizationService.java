@@ -9,6 +9,7 @@ import com.l2c.nexus.membership.application.MembershipView;
 import com.l2c.nexus.membership.domain.OrgRole;
 import com.l2c.nexus.organization.domain.Organization;
 import com.l2c.nexus.organization.persistence.OrganizationRepository;
+import com.l2c.nexus.shared.error.NotFoundException;
 import java.security.SecureRandom;
 import java.time.Clock;
 import java.util.Comparator;
@@ -19,6 +20,7 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -127,5 +129,15 @@ public class OrganizationService {
                                                 "Organization vanished after the gate: "
                                                         + organizationId));
         return new OrganizationInfo(org.getId(), org.getName(), org.getSlug(), org.getStatus());
+    }
+
+    /**
+     * Serializes membership changes of one organization: concurrent role changes and removals queue
+     * up here, so rules such as "keep at least one owner" cannot be raced. Requires an existing
+     * transaction, because the lock lives exactly as long as it does.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void lockForMembershipChanges(UUID organizationId) {
+        organizations.lockById(organizationId).orElseThrow(NotFoundException::new);
     }
 }

@@ -31,29 +31,6 @@ public class MembershipService {
         return view(saved);
     }
 
-    @Transactional(readOnly = true)
-    public List<MembershipView> activeMembershipsOf(UUID userId) {
-        return memberships.findByUserIdAndStatus(userId, MembershipStatus.ACTIVE).stream()
-                .map(MembershipService::view)
-                .toList();
-    }
-
-    private static MembershipView view(Membership membership) {
-        return new MembershipView(
-                membership.getId(),
-                membership.getOrganizationId(),
-                membership.getUserId(),
-                membership.getRole());
-    }
-
-    @Transactional(readOnly = true)
-    public Optional<MembershipView> findActiveMembership(UUID organizationId, UUID userId) {
-        return memberships
-                .findByOrganizationIdAndUserIdAndStatus(
-                        organizationId, userId, MembershipStatus.ACTIVE)
-                .map(MembershipService::view);
-    }
-
     /** Adds the user, or reactivates their revoked membership. Fails if already active. */
     @Transactional
     public MembershipView addOrReactivate(UUID organizationId, UUID userId, OrgRole role) {
@@ -75,5 +52,64 @@ public class MembershipService {
                                                 Membership.create(
                                                         organizationId, userId, role, now)));
         return view(membership);
+    }
+
+    @Transactional(readOnly = true)
+    public List<MembershipView> activeMembershipsOf(UUID userId) {
+        return memberships.findByUserIdAndStatus(userId, MembershipStatus.ACTIVE).stream()
+                .map(MembershipService::view)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<MembershipView> findActiveMembership(UUID organizationId, UUID userId) {
+        return memberships
+                .findByOrganizationIdAndUserIdAndStatus(
+                        organizationId, userId, MembershipStatus.ACTIVE)
+                .map(MembershipService::view);
+    }
+
+    /** A membership of THIS organization, active or revoked. */
+    @Transactional(readOnly = true)
+    public Optional<MembershipView> find(UUID organizationId, UUID membershipId) {
+        return memberships
+                .findByIdAndOrganizationId(membershipId, organizationId)
+                .map(MembershipService::view);
+    }
+
+    @Transactional
+    public MembershipView changeRole(UUID organizationId, UUID membershipId, OrgRole newRole) {
+        Membership membership = require(organizationId, membershipId);
+        membership.changeRole(newRole, clock.instant());
+        return view(memberships.saveAndFlush(membership));
+    }
+
+    @Transactional
+    public void revoke(UUID organizationId, UUID membershipId) {
+        Membership membership = require(organizationId, membershipId);
+        membership.revoke(clock.instant());
+        memberships.saveAndFlush(membership);
+    }
+
+    @Transactional(readOnly = true)
+    public long countActiveByRole(UUID organizationId, OrgRole role) {
+        return memberships.countByOrganizationIdAndRoleAndStatus(
+                organizationId, role, MembershipStatus.ACTIVE);
+    }
+
+    private Membership require(UUID organizationId, UUID membershipId) {
+        return memberships
+                .findByIdAndOrganizationId(membershipId, organizationId)
+                .orElseThrow(() -> new IllegalStateException("Membership not found"));
+    }
+
+    private static MembershipView view(Membership membership) {
+        return new MembershipView(
+                membership.getId(),
+                membership.getOrganizationId(),
+                membership.getUserId(),
+                membership.getRole(),
+                membership.getStatus(),
+                membership.getVersion());
     }
 }

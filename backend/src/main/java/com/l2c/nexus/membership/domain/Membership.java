@@ -66,6 +66,20 @@ public class Membership {
         this.updatedAt = now;
     }
 
+    public void changeRole(OrgRole newRole, Instant now) {
+        this.role = newRole;
+        this.updatedAt = now;
+    }
+
+    public void revoke(Instant now) {
+        this.status = MembershipStatus.REVOKED;
+        this.updatedAt = now;
+    }
+
+    public long getVersion() {
+        return version;
+    }
+
     public UUID getId() {
         return id;
     }

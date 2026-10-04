@@ -102,6 +102,8 @@ One filter protects the whole tenant surface, so authorization cannot be forgott
 - `ActiveAccountFilter` re-reads the account on **every** request and requires `ACTIVE` plus a verified email, destroying the session and returning `401` otherwise (ADR-0018). Disabling an account therefore takes effect on the next request rather than at the next login.
 - Tenant ownership is also enforced by the database: `memberships` exposes `UNIQUE (organization_id, id)` and invitations reference `(organization_id, invited_by_membership_id)`, so a row cannot point at another organization's member even if application code is wrong.
 
+## Member administration [built]
+
 
 ## Known limitations and remaining security work
 

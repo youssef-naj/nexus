@@ -1,6 +1,7 @@
 package com.l2c.nexus.shared.web;
 
 import com.l2c.nexus.shared.error.ConflictException;
+import com.l2c.nexus.shared.error.ForbiddenActionException;
 import com.l2c.nexus.shared.error.NotFoundException;
 import com.l2c.nexus.shared.ratelimit.RateLimitExceededException;
 import java.util.ArrayList;
@@ -12,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -91,6 +93,25 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
         problem.setTitle("Internal server error");
         problem.setDetail("An unexpected error occurred.");
+        return problem;
+    }
+
+    @ExceptionHandler(ForbiddenActionException.class)
+    ProblemDetail handleForbiddenAction(ForbiddenActionException ex) {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.FORBIDDEN);
+        problem.setTitle("Forbidden");
+        problem.setDetail(ex.getMessage());
+        problem.setProperty("code", ex.getCode());
+        return problem;
+    }
+
+    /** Hibernate detected that someone else changed the row between our read and our write. */
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    ProblemDetail handleConcurrentModification(OptimisticLockingFailureException ex) {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.CONFLICT);
+        problem.setTitle("Conflict");
+        problem.setDetail("The resource was changed by someone else. Reload and try again.");
+        problem.setProperty("code", "CONCURRENT_MODIFICATION");
         return problem;
     }
 }

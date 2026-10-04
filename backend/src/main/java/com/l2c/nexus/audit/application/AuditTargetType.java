@@ -4,5 +4,6 @@ package com.l2c.nexus.audit.application;
 public enum AuditTargetType {
     USER,
     ORGANIZATION,
-    INVITATION
+    INVITATION,
+    MEMBERSHIP
 }

@@ -12,7 +12,10 @@ public enum AuditEventType {
     INVITATION_CREATED("role"),
     INVITATION_REVOKED("role"),
     INVITATION_ACCEPTED("role"),
-    INVITATION_REJECTED("role");
+    INVITATION_REJECTED("role"),
+    MEMBER_ROLE_CHANGED("fromRole", "toRole"),
+    MEMBER_REMOVED("role"),
+    MEMBER_LEFT("role");
 
     private final Set<String> allowedMetadataKeys;
 
