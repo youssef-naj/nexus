@@ -5,5 +5,6 @@ public enum AuditTargetType {
     USER,
     ORGANIZATION,
     INVITATION,
-    MEMBERSHIP
+    MEMBERSHIP,
+    DEPARTMENT
 }

@@ -1,6 +1,6 @@
 # Data model
 
-Implemented through Flyway migrations **V1 to V6**: `users`, `user_tokens`, `spring_session`, `audit_logs`, `organizations`, `memberships`, `invitations`. Departments, requests and their history are the approved design and arrive with Phases 5 and 6.
+Implemented through Flyway migrations **V1 to V6**: `users`, `user_tokens`, `spring_session`, `audit_logs`, `organizations`, `memberships`, `invitations`. Departments, requests and their history are the approved design and arrived with V7.
 
 ## Entity relationship diagram (target model)
 
@@ -136,7 +136,7 @@ erDiagram
 | `organizations` | Tenants. Holds the per-organization request counter (not yet used). | **Implemented (V5)** |
 | `memberships` | A user's role in one organization. One row per (organization, user). Never deleted, only `REVOKED`. | **Implemented (V5)** |
 | `invitations` | Pending, accepted, rejected or revoked invitations (token hash only). | **Implemented (V6)** |
-| `departments` | Organization-scoped groupings, deactivated rather than deleted. | Planned (Phase 5) |
+| `departments` | Organization-scoped groupings, deactivated rather than deleted. | **Implemented (V7)** |
 | `department_memberships` | Assigns members to departments within one organization. | Planned (Phase 5) |
 | `service_requests` | The business object that moves through the approval workflow. | Planned (Phase 5) |
 | `request_events` | Append-only history of each request transition. | Planned (Phase 6) |

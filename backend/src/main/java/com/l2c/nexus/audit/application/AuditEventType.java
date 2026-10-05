@@ -15,7 +15,11 @@ public enum AuditEventType {
     INVITATION_REJECTED("role"),
     MEMBER_ROLE_CHANGED("fromRole", "toRole"),
     MEMBER_REMOVED("role"),
-    MEMBER_LEFT("role");
+    MEMBER_LEFT("role"),
+    DEPARTMENT_CREATED("name"),
+    DEPARTMENT_UPDATED("fromName", "toName"),
+    DEPARTMENT_DEACTIVATED(),
+    DEPARTMENT_REACTIVATED();
 
     private final Set<String> allowedMetadataKeys;
 

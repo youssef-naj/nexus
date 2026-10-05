@@ -36,7 +36,7 @@ Checked against the original acceptance criteria. Updated at the end of each pha
 |---|---|
 | A. Identity and authentication | Complete (password reset deferred) |
 | B. Organizations and memberships | Complete: create, list, switch, invite, accept or reject, change and revoke roles, leave. Organization settings and rename are not built |
-| C. Departments | Phase 5 |
+| C. Departments | Backend done; assignments and UI in progress. |
 | D. Internal service requests | Phase 5 |
 | E. Approval workflow | Phase 6 |
 | F. Audit history | Recording built; viewing in Phase 6 |
