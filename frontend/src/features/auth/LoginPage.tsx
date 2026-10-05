@@ -14,6 +14,7 @@ import { loginSchema, type LoginForm } from "./schemas"
 export function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
+  const fromInvitation = safeRedirect(location.state).startsWith("/invitations/accept")
   const login = useLogin()
   const [formError, setFormError] = useState<string | null>(null)
   const {
@@ -46,6 +47,15 @@ export function LoginPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} noValidate className="grid gap-4">
+            {fromInvitation && (
+              <Alert>
+                <AlertDescription>
+                  Sign in with the email address your invitation was sent to. If you don't have an
+                  account yet, create one with that address, verify it, then open the invitation
+                  link again.
+                </AlertDescription>
+              </Alert>
+            )}
             {formError && (
               <Alert variant="destructive">
                 <AlertDescription>{formError}</AlertDescription>

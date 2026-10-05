@@ -9,6 +9,8 @@ import { CreateOrganizationPage } from "@/features/organizations/CreateOrganizat
 import { OrgDashboardPage } from "@/features/organizations/OrgDashboardPage"
 import { OrgLayout } from "@/features/organizations/OrgLayout"
 import { OrganizationsPage } from "@/features/organizations/OrganizationsPage"
+import { AcceptInvitationPage } from "@/features/members/AcceptInvitationPage"
+import { MembersPage } from "@/features/members/MembersPage"
 
 export const router = createBrowserRouter([
   { path: "/login", element: <LoginPage /> },
@@ -22,10 +24,14 @@ export const router = createBrowserRouter([
         children: [
           { path: "/", element: <OrganizationsPage /> },
           { path: "/organizations/new", element: <CreateOrganizationPage /> },
+          { path: "/invitations/accept", element: <AcceptInvitationPage /> },
           {
             path: "/orgs/:orgId",
             element: <OrgLayout />,
-            children: [{ index: true, element: <OrgDashboardPage /> }],
+            children: [
+              { index: true, element: <OrgDashboardPage /> },
+              { path: "members", element: <MembersPage /> },
+            ],
           },
         ],
       },

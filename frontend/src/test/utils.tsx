@@ -1,7 +1,7 @@
 import type { ReactElement } from "react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { render } from "@testing-library/react"
-import { MemoryRouter } from "react-router"
+import { MemoryRouter, type InitialEntry } from "react-router"
 import { vi } from "vitest"
 
 function newClient() {
@@ -14,7 +14,7 @@ export function renderWithQuery(ui: ReactElement) {
   return render(<QueryClientProvider client={newClient()}>{ui}</QueryClientProvider>)
 }
 
-export function renderWithProviders(ui: ReactElement, initialEntries: string[] = ["/"]) {
+export function renderWithProviders(ui: ReactElement, initialEntries: InitialEntry[] = ["/"]) {
   return render(
     <QueryClientProvider client={newClient()}>
       <MemoryRouter initialEntries={initialEntries}>{ui}</MemoryRouter>

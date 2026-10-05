@@ -7,6 +7,8 @@ import { ApiError } from "@/shared/api/client"
 import { OrgContext, type OrgContextValue } from "./orgContext"
 import type { Permission } from "./permissions"
 import { useOrganization } from "./queries"
+import { NavLink } from "react-router"
+import { cn } from "@/lib/utils"
 
 export function OrgLayout() {
   const { orgId = "" } = useParams()
@@ -70,9 +72,34 @@ export function OrgLayout() {
     )
   }
 
+  const base = `/orgs/${value.organization.id}`
   return (
     <OrgContext.Provider value={value}>
+      <nav aria-label="Organization" className="mb-4 flex gap-4 border-b">
+        <OrgNavLink to={base} end>
+          Overview
+        </OrgNavLink>
+        {value.can("MEMBER_VIEW") && <OrgNavLink to={`${base}/members`}>Members</OrgNavLink>}
+      </nav>
       <Outlet />
     </OrgContext.Provider>
+  )
+}
+function OrgNavLink({ to, end, children }: { to: string; end?: boolean; children: string }) {
+  return (
+    <NavLink
+      to={to}
+      end={end ?? false}
+      className={({ isActive }) =>
+        cn(
+          "-mb-px border-b-2 px-1 py-2 text-sm",
+          isActive
+            ? "border-primary font-medium"
+            : "border-transparent text-muted-foreground hover:text-foreground",
+        )
+      }
+    >
+      {children}
+    </NavLink>
   )
 }
