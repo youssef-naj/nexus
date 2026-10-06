@@ -78,8 +78,11 @@ Supporting measures:
 - The membership is looked up before the organization, so existing and missing organizations cost the same.
 - The gate **fails closed**: controllers receive the tenant through `@CurrentOrg`; a route that was somehow not gated fails with an error instead of running unguarded.
 - Repositories for tenant data are always queried with the organization id (`findByIdAndOrganizationId`). An id from another tenant is simply "not found".
-- Tenant tables reference memberships and departments with **composite foreign keys** `(organization_id, id)`, so the database refuses cross-tenant references even if application code is wrong (live for invitations; used by every later tenant table).
-- Tests: a reusable fixture of two organizations and seven users, a standard isolation battery (`assertIsolated`) applied to every tenant endpoint, and an inventory test that fails if any `/api/orgs/{id}/...` route is reachable by a non-member.
+- Tenant tables reference memberships and departments with **composite foreign keys** `(organization_id, id)`, so the database refuses cross-tenant references even if application code is wrong. Two live examples, both tested with raw SQL that bypasses the application:
+  - `fk_invitations_inviter`: an invitation's inviter must be a member of the **same** organization.
+  - `fk_dm_department` and `fk_dm_membership` on `department_memberships`: a member of one organization cannot be assigned to a department of another, in either direction.
+    Every later tenant table (requests and their history) follows the same pattern.
+- Tests: a reusable fixture of two organizations and seven users, a standard isolation battery (`assertIsolated`) applied to every tenant endpoint, and an inventory test that fails if any `/api/orgs/{id}/...` route is reachable by a non-member. Schema tests also insert cross-tenant rows directly with SQL and assert that the foreign keys reject them.
 
 ## Authorization [built]
 

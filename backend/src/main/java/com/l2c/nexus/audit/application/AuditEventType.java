@@ -19,7 +19,9 @@ public enum AuditEventType {
     DEPARTMENT_CREATED("name"),
     DEPARTMENT_UPDATED("fromName", "toName"),
     DEPARTMENT_DEACTIVATED(),
-    DEPARTMENT_REACTIVATED();
+    DEPARTMENT_REACTIVATED(),
+    DEPARTMENT_MEMBER_ADDED("membershipId"),
+    DEPARTMENT_MEMBER_REMOVED("membershipId");
 
     private final Set<String> allowedMetadataKeys;
 

@@ -137,13 +137,13 @@ erDiagram
 | `memberships` | A user's role in one organization. One row per (organization, user). Never deleted, only `REVOKED`. | **Implemented (V5)** |
 | `invitations` | Pending, accepted, rejected or revoked invitations (token hash only). | **Implemented (V6)** |
 | `departments` | Organization-scoped groupings, deactivated rather than deleted. | **Implemented (V7)** |
-| `department_memberships` | Assigns members to departments within one organization. | Planned (Phase 5) |
+| `department_memberships` | Assigns members to departments within one organization. | Implemented (V8) |
 | `service_requests` | The business object that moves through the approval workflow. | Planned (Phase 5) |
 | `request_events` | Append-only history of each request transition. | Planned (Phase 6) |
 
 ## Key design decisions
 
-**Tenant ownership is enforced by the database.** `memberships` exposes `UNIQUE (organization_id, id)`; tenant tables reference memberships (and later departments) with **composite foreign keys**. A row for Organization A therefore cannot reference a member of Organization B, even if application code is wrong. The first live example is `fk_invitations_inviter`, which is tested directly. Departments and requests will use the same pattern.
+**Tenant ownership is enforced by the database.** `memberships` exposes `UNIQUE (organization_id, id)`; tenant tables reference memberships (and later departments) with **composite foreign keys**. A row for Organization A therefore cannot reference a member of Organization B, even if application code is wrong. Live examples: `fk_invitations_inviter` (invitations) and `fk_dm_department` / `fk_dm_membership` (department assignments), each tested directly with raw SQL. Requests will use the same pattern.
 
 **Tenant tables reference memberships, not users.** A creator, assignee or reviewer must be a member of that organization. Because memberships are never deleted, history stays valid after a member is revoked or leaves.
 
@@ -179,6 +179,7 @@ Indexes exist only for a named query. Planned ones must be verified with `EXPLAI
 | `service_requests` | `(organization_id, created_by_membership_id, created_at DESC)` | "My requests" | Planned |
 | `service_requests` | `(organization_id, assignee_membership_id)` | "Assigned to me" | Planned |
 | `request_events` | `(request_id, occurred_at)` | Request history timeline | Planned |
+| `department_memberships` | `ix_dm_membership` on `(membership_id)` |          | Implemented |
 
 ## Request reference numbers (planned)
 

@@ -25,7 +25,7 @@ flowchart LR
             MEM["membership [built]"]
             TEAM["team: invitations + member admin [built]"]
             AUD["audit [built]"]
-            DEP["department [planned]"]
+            DEP["department [built]"]
             REQ["request + approval [planned]"]
             DASH["dashboard [planned]"]
         end
@@ -37,6 +37,10 @@ flowchart LR
     Modules --> DB
     ID -. emails .-> MAIL
     TEAM -. emails .-> MAIL
+    DEP --> ORG
+    DEP --> MEM
+    DEP --> AUD
+    TEAM --> DEP
 ```
 
 ## Module dependencies

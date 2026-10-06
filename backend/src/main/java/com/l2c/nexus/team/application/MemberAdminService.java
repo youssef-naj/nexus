@@ -4,6 +4,7 @@ import com.l2c.nexus.audit.application.AuditEvent;
 import com.l2c.nexus.audit.application.AuditEventType;
 import com.l2c.nexus.audit.application.AuditService;
 import com.l2c.nexus.audit.application.AuditTargetType;
+import com.l2c.nexus.department.application.DepartmentMemberService;
 import com.l2c.nexus.membership.application.MembershipService;
 import com.l2c.nexus.membership.application.MembershipView;
 import com.l2c.nexus.membership.application.RoleAssignmentPolicy;
@@ -35,18 +36,21 @@ public class MemberAdminService {
     private final AccessPolicy policy;
     private final RoleAssignmentPolicy roles;
     private final AuditService audit;
+    private final DepartmentMemberService departmentMembers;
 
     public MemberAdminService(
             MembershipService memberships,
             OrganizationService organizations,
             AccessPolicy policy,
             RoleAssignmentPolicy roles,
-            AuditService audit) {
+            AuditService audit,
+            DepartmentMemberService departmentMembers) {
         this.memberships = memberships;
         this.organizations = organizations;
         this.policy = policy;
         this.roles = roles;
         this.audit = audit;
+        this.departmentMembers = departmentMembers;
     }
 
     @Transactional
@@ -113,6 +117,7 @@ public class MemberAdminService {
             requireAnotherOwner(actor.organizationId());
         }
 
+        departmentMembers.clearFor(actor.organizationId(), membershipId);
         memberships.revoke(actor.organizationId(), membershipId);
         audit.record(
                 AuditEvent.of(
@@ -131,6 +136,7 @@ public class MemberAdminService {
             requireAnotherOwner(actor.organizationId());
         }
 
+        departmentMembers.clearFor(actor.organizationId(), actor.membershipId());
         memberships.revoke(actor.organizationId(), actor.membershipId());
         audit.record(
                 AuditEvent.of(
