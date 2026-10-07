@@ -3,6 +3,7 @@ package com.l2c.nexus.shared.web;
 import com.l2c.nexus.shared.error.ConflictException;
 import com.l2c.nexus.shared.error.ForbiddenActionException;
 import com.l2c.nexus.shared.error.NotFoundException;
+import com.l2c.nexus.shared.error.ValidationFailedException;
 import com.l2c.nexus.shared.ratelimit.RateLimitExceededException;
 import java.util.ArrayList;
 import java.util.List;
@@ -112,6 +113,15 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         problem.setTitle("Conflict");
         problem.setDetail("The resource was changed by someone else. Reload and try again.");
         problem.setProperty("code", "CONCURRENT_MODIFICATION");
+        return problem;
+    }
+
+    @ExceptionHandler(ValidationFailedException.class)
+    ProblemDetail handleValidationFailed(ValidationFailedException ex) {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+        problem.setTitle("Validation failed");
+        problem.setDetail("One or more fields are invalid.");
+        problem.setProperty("errors", ex.getErrors());
         return problem;
     }
 }

@@ -1,6 +1,6 @@
 # Data model
 
-Implemented through Flyway migrations **V1 to V6**: `users`, `user_tokens`, `spring_session`, `audit_logs`, `organizations`, `memberships`, `invitations`. Departments, requests and their history are the approved design and arrived with V7.
+Implemented through Flyway migrations **V1 to V9**: `users`, `user_tokens`, `spring_session`, `audit_logs`, `organizations`, `memberships`, `invitations`, `departments`, `department_memberships` and `service_requests`. Request events (the history of each request) arrive with the approval phase.
 
 ## Entity relationship diagram (target model)
 
@@ -75,16 +75,20 @@ erDiagram
         bigint version
     }
     DEPARTMENTS {
-        uuid id PK
-        uuid organization_id FK
-        text name "unique per org"
-        boolean active
-        bigint version
+      uuid id PK
+      uuid organization_id FK
+      text name "unique per org, ignoring case"
+      text description
+      boolean active
+      timestamptz created_at
+      timestamptz updated_at
+      bigint version
     }
     DEPARTMENT_MEMBERSHIPS {
-        uuid organization_id FK
-        uuid department_id FK
-        uuid membership_id FK
+      uuid organization_id FK
+      uuid department_id FK "PK part, same organization"
+      uuid membership_id FK "PK part, same organization"
+      timestamptz created_at
     }
     SERVICE_REQUESTS {
         uuid id PK
@@ -133,17 +137,17 @@ erDiagram
 | `user_tokens` | Single-use email verification and password reset tokens (hash only). | **Implemented (V2)**; password reset not built |
 | `spring_session`, `spring_session_attributes` | Server-side sessions (Spring Session JDBC), created by Flyway. | **Implemented (V3)** |
 | `audit_logs` | Append-only event trail. Triggers reject UPDATE, DELETE and TRUNCATE. No foreign keys. | **Implemented (V4)** |
-| `organizations` | Tenants. Holds the per-organization request counter (not yet used). | **Implemented (V5)** |
+| `organizations` | Tenants. Holds the per-organization request counter. | **Implemented (V5)** |
 | `memberships` | A user's role in one organization. One row per (organization, user). Never deleted, only `REVOKED`. | **Implemented (V5)** |
 | `invitations` | Pending, accepted, rejected or revoked invitations (token hash only). | **Implemented (V6)** |
 | `departments` | Organization-scoped groupings, deactivated rather than deleted. | **Implemented (V7)** |
-| `department_memberships` | Assigns members to departments within one organization. | Implemented (V8) |
-| `service_requests` | The business object that moves through the approval workflow. | Planned (Phase 5) |
-| `request_events` | Append-only history of each request transition. | Planned (Phase 6) |
+| `department_memberships` | Assigns members to departments. Composite foreign keys keep both sides in the row's organization. | **Implemented (V8)** |
+| `service_requests` | The business object that moves through the approval workflow. Drafts only until the workflow phase. | **Implemented (V9)** |
+| `request_events` | Append-only history of each request transition. | Planned (approval phase) |
 
 ## Key design decisions
 
-**Tenant ownership is enforced by the database.** `memberships` exposes `UNIQUE (organization_id, id)`; tenant tables reference memberships (and later departments) with **composite foreign keys**. A row for Organization A therefore cannot reference a member of Organization B, even if application code is wrong. Live examples: `fk_invitations_inviter` (invitations) and `fk_dm_department` / `fk_dm_membership` (department assignments), each tested directly with raw SQL. Requests will use the same pattern.
+**Tenant ownership is enforced by the database.** `memberships` exposes `UNIQUE (organization_id, id)`; tenant tables reference memberships (and later departments) with **composite foreign keys**. A row for Organization A therefore cannot reference a member of Organization B, even if application code is wrong. Live examples, each tested directly with raw SQL: `fk_invitations_inviter` (invitations), `fk_dm_department` and `fk_dm_membership` (department assignments), and `fk_requests_creator`, `fk_requests_assignee` and `fk_requests_department` (service requests). A NULL assignee or department simply skips its key, which is how "optional" is expressed.
 
 **Tenant tables reference memberships, not users.** A creator, assignee or reviewer must be a member of that organization. Because memberships are never deleted, history stays valid after a member is revoked or leaves.
 
@@ -154,6 +158,8 @@ erDiagram
 **Emails are unique ignoring case** through a unique index on `lower(email)`; invitation emails are stored lowercase and checked by a constraint.
 
 **Status values** are text with CHECK constraints, not database enum types, so adding a value is a simple migration.
+
+**Requests:** the creator is a membership, so a request keeps its history when its creator leaves. Statuses and categories are CHECK constraints. `UNIQUE (organization_id, id)` on requests is the target for the composite key of request events. Reference numbers are unique per organization and come from the organization's counter.
 
 **Invariants in the database, not only in code:** unique membership per user and organization; valid roles and statuses; slug format; at most one pending invitation per (organization, email) through a partial unique index; an invitation's decision time is set exactly when it is no longer pending.
 
@@ -173,17 +179,20 @@ Indexes exist only for a named query. Planned ones must be verified with `EXPLAI
 | `invitations` | unique `token_hash` | Token lookup on acceptance | Implemented |
 | `invitations` | partial unique `(organization_id, email) WHERE status = 'PENDING'` | One pending invitation per person | Implemented |
 | `invitations` | `ix_invitations_org_status` on `(organization_id, status, created_at DESC)` | Pending invitations of an organization | Implemented |
-| `departments` | unique `(organization_id, lower(name))`; unique `(organization_id, id)` | Unique names per organization; composite-key target | Planned |
-| `service_requests` | unique `(organization_id, reference)` | Reference numbers unique per organization | Planned |
-| `service_requests` | `(organization_id, status, created_at DESC)` | Request list filtering and dashboard counts | Planned |
-| `service_requests` | `(organization_id, created_by_membership_id, created_at DESC)` | "My requests" | Planned |
-| `service_requests` | `(organization_id, assignee_membership_id)` | "Assigned to me" | Planned |
+| `departments` | `uq_departments_org_name` on `(organization_id, lower(name))` | Unique names per organization ignoring case; also serves the listing sorted by name | Implemented |
+| `departments` | unique `(organization_id, id)` | Target of composite foreign keys | Implemented |
+| `department_memberships` | primary key `(department_id, membership_id)` | No duplicate assignment; "who is in this department?" | Implemented |
+| `department_memberships` | `ix_dm_membership` on `(membership_id)` | "Which departments is this member in?" | Implemented |
+| `service_requests` | `uq_requests_org_reference` on `(organization_id, reference)` | Reference numbers unique per organization; lookup by reference | Implemented |
+| `service_requests` | `uq_requests_org_id` on `(organization_id, id)` | Target of the composite key of request events | Implemented |
+| `service_requests` | `ix_requests_org_status_created` on `(organization_id, status, created_at DESC)` | Request list filtered by status; dashboard counts | Implemented |
+| `service_requests` | `ix_requests_org_creator_created` on `(organization_id, created_by_membership_id, created_at DESC)` | "My requests" and the employee's restricted list | Implemented |
+| `service_requests` | `(organization_id, assignee_membership_id)` | "Assigned to me" | Planned: added when that query exists |
 | `request_events` | `(request_id, occurred_at)` | Request history timeline | Planned |
-| `department_memberships` | `ix_dm_membership` on `(membership_id)` |          | Implemented |
 
-## Request reference numbers (planned)
+## Request reference numbers
 
-Each organization has a counter (`organizations.request_counter`, already in the table). A new request increments it atomically in the same transaction as the insert and formats the value, for example `REQ-000042`. The unique `(organization_id, reference)` constraint is the safety net.
+Each organization has a counter (`organizations.request_counter`). Creating a request runs one `UPDATE ... SET request_counter = request_counter + 1 ... RETURNING` inside the creation transaction and formats the value, for example `REQ-000042`. The update locks the organization's row until the transaction ends, so concurrent creators queue up and each gets a distinct number; a rolled-back creation rolls its number back too, so there are no gaps. The unique `(organization_id, reference)` constraint is the safety net. The counter column is deliberately not mapped in the JPA entity, so entity updates never overwrite it.
 
 ## Migration rules
 

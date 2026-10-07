@@ -2,7 +2,7 @@
 
 A multi-tenant **Business Operations SaaS** platform. Independent organizations share one application and manage their members, departments, internal service requests, approval workflows and audit history, with **strict tenant isolation**: a user of Organization A can never access Organization B's private data.
 
-> **Status: Phase 4 complete (organizations, members and invitations).** You can register, verify your email, create organizations, invite people, accept invitations and manage members and roles, with tenant isolation enforced and tested. Departments, service requests, approvals and the dashboard are **not implemented yet**. See [Status and roadmap](#status-and-roadmap) and [docs/status.md](docs/status.md).
+> **Status: Phase 5 in progress (departments and service requests: backend done, screens next).** You can register, verify your email, create organizations, invite people, manage members and roles, and (through the API) manage departments, assign members to them, and create, edit and search service requests, with tenant isolation enforced and tested. Submitting and reviewing requests, the dashboard and the screens for departments and requests are **not implemented yet**. See [Status and roadmap](#status-and-roadmap) and [docs/status.md](docs/status.md).
 
 ## What exists today
 
@@ -10,6 +10,7 @@ A multi-tenant **Business Operations SaaS** platform. Independent organizations 
 - Organizations: create (you become Owner), list, switch between them (the organization is part of the URL), leave.
 - A server-side **tenant gate**: outsiders get a `404` identical to "does not exist". Role-based permissions per membership.
 - Invitations by email (hashed single-use tokens, accepted only by the invited verified account), member list, role changes, removal, with no role escalation, no self-management, and an organization always keeps an Owner.
+- Departments (create, list, update, deactivate), assignment of members to departments, and internal service requests (reference numbers such as `REQ-000042`, drafts, editing by the creator, filtering, search, pagination). These are complete in the API and its tests; the screens are the next step.
 - An append-only audit log written in the same transaction as each change.
 - React + TypeScript frontend for all of the above, with loading, empty, validation and error states.
 - Integration tests against a real PostgreSQL (Testcontainers), a reusable cross-tenant isolation test battery, frontend component tests, formatting and lint checks, GitHub Actions CI and Dependabot.
@@ -17,7 +18,7 @@ A multi-tenant **Business Operations SaaS** platform. Independent organizations 
 
 ## Planned features (MVP)
 
-Departments, internal service requests, an approval workflow (draft, submit, approve, reject, request changes), audit history viewer, and an organization dashboard. See [docs/architecture.md](docs/architecture.md) and [docs/status.md](docs/status.md).
+Screens for departments and requests, submitting and reviewing requests (approve, reject, request changes), the audit history viewer, and an organization dashboard. See [docs/architecture.md](docs/architecture.md) and [docs/status.md](docs/status.md).
 
 ## Tech stack
 
@@ -160,7 +161,7 @@ CI runs the same commands for every push and pull request. The backend suite inc
 ```
 nexus/
 ├─ backend/     Spring Boot application (package com.l2c.nexus)
-│               shared, identity, audit, organization, membership, team
+│               shared, identity, audit, organization, membership, team, department, request
 ├─ frontend/    React + TypeScript application
 ├─ docs/        Architecture, data model, security, status, decision records
 ├─ infra/       Reserved for deployment assets
@@ -186,7 +187,7 @@ nexus/
 | 2 | Identity and authentication | Done |
 | 3 | Organizations and tenant isolation | Done |
 | 4 | Memberships, invitations, roles | Done |
-| 5 | Departments and service requests | Next |
+| 5 | Departments and service requests | In progress (backend done) |
 | 6 | Approval workflow and audit history | Planned |
 | 7 | React dashboard and user experience | Planned |
 | 8 | Security hardening and testing | Planned |
@@ -194,7 +195,7 @@ nexus/
 
 ## Known limitations
 
-- No departments, requests, approvals or dashboard yet; no platform administration; organization settings are not editable.
+- No screens for departments or requests yet, no way to submit or review a request, no dashboard; no platform administration; organization settings are not editable.
 - No password reset, MFA, or "sign out everywhere". Rate limiting is per application instance and in memory.
 - No demo accounts, screenshots or deployment guide yet.
 - See [docs/security.md](docs/security.md) for the full, honest list of remaining security work.

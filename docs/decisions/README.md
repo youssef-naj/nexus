@@ -25,5 +25,8 @@ Short records of the significant decisions made for Nexus. Each ADR states the c
 | [0019](0019-tenant-gate-and-permission-policy.md) | Tenant gate and permission policy | Accepted |
 | [0020](0020-organization-in-the-frontend-route.md) | Organization in the frontend route | Accepted |
 | [0021](0021-invitations-and-the-team-module.md) | Invitations and the team module | Accepted |
+| [0024](0024-departments.md) | Departments | Accepted |
+| [0025](0025-department-assignments.md) | Department assignments | Accepted |
+| [0026](0026-service-requests.md) | Service requests | Accepted |
 
 Use [0000-template.md](0000-template.md) for new records.

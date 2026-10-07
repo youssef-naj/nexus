@@ -8,67 +8,73 @@ Nexus is a **modular monolith**: one Spring Boot application, one PostgreSQL dat
 
 ```mermaid
 flowchart LR
-    subgraph Client
-        B["Browser<br/>React + TypeScript SPA [built]"]
+  subgraph Client
+    B["Browser<br/>React + TypeScript SPA [built]"]
+  end
+  subgraph Edge
+    P["Same-origin access<br/>Vite proxy in dev [built]<br/>reverse proxy in prod [planned]"]
+  end
+  subgraph App["Spring Boot modular monolith"]
+    SEC["Security filter chain [built]<br/>rate limit, CSRF, session, account check"]
+    GATE["Tenant gate [built]<br/>/api/orgs/{orgId}/** needs an active membership"]
+    API["Controllers + Problem Details errors [built]"]
+    subgraph Modules
+      SH["shared [built]"]
+      ID["identity [built]"]
+      ORG["organization [built]"]
+      MEM["membership [built]"]
+      TEAM["team: invitations + member admin [built]"]
+      AUD["audit [built]"]
+      DEP["department [built, API only]"]
+      REQ["request [built, API only]"]
+      APP["approval workflow [planned]"]
+      DASH["dashboard [planned]"]
     end
-    subgraph Edge
-        P["Same-origin access<br/>Vite proxy in dev [built]<br/>reverse proxy in prod [planned]"]
-    end
-    subgraph App["Spring Boot modular monolith"]
-        SEC["Security filter chain [built]<br/>rate limit, CSRF, session, account check"]
-        GATE["Tenant gate [built]<br/>/api/orgs/{orgId}/** needs an active membership"]
-        API["Controllers + Problem Details errors [built]"]
-        subgraph Modules
-            SH["shared [built]"]
-            ID["identity [built]"]
-            ORG["organization [built]"]
-            MEM["membership [built]"]
-            TEAM["team: invitations + member admin [built]"]
-            AUD["audit [built]"]
-            DEP["department [built]"]
-            REQ["request + approval [planned]"]
-            DASH["dashboard [planned]"]
-        end
-    end
-    DB[("PostgreSQL 17<br/>Flyway migrations V1-V6 [built]")]
-    MAIL["Mailpit, dev email [built]"]
+  end
+  DB[("PostgreSQL 17<br/>Flyway migrations V1-V9 [built]")]
+  MAIL["Mailpit, dev email [built]"]
 
-    B --> P --> SEC --> GATE --> API --> Modules
-    Modules --> DB
-    ID -. emails .-> MAIL
-    TEAM -. emails .-> MAIL
-    DEP --> ORG
-    DEP --> MEM
-    DEP --> AUD
-    TEAM --> DEP
+  B --> P --> SEC --> GATE --> API --> Modules
+  Modules --> DB
+  ID -. emails .-> MAIL
+  TEAM -. emails .-> MAIL
 ```
 
 ## Module dependencies
 
 ```mermaid
 flowchart TD
-    shared["shared<br/>time, ids, tokens, rate limit, errors"]
-    audit --> shared
-    identity --> audit
-    identity --> shared
-    membership --> shared
-    organization --> membership
-    organization --> audit
-    team --> organization
-    team --> membership
-    team --> identity
-    team --> audit
+  shared["shared<br/>time, ids, tokens, rate limit, errors"]
+  audit --> shared
+  identity --> audit
+  identity --> shared
+  membership --> shared
+  organization --> membership
+  organization --> audit
+  department --> organization
+  department --> membership
+  department --> audit
+  request --> organization
+  request --> membership
+  request --> department
+  team --> organization
+  team --> membership
+  team --> identity
+  team --> audit
+  team --> department
 ```
+
+Rules: arrows point at what a module may use; nothing depends on `team` or `request`. `shared` depends on no feature. Modules reach each other only through public application services (`MembershipService`, `OrganizationService`, `RequestNumberAllocator`, `DepartmentDirectory`, `UserDirectory`, `AuditService`). Documented exceptions: the organization member list, the department member list and the request list and detail are read-only joins over other modules' tables, because sorting and displaying names needs them (ADR-0022, ADR-0025, ADR-0026). Writes always go through the owning module. Architecture tests that enforce these rules are planned for Phase 8.
 
 Rules: arrows point at what a module may use; nothing depends on `team`. `shared` depends on no feature. Modules reach each other only through public application services (`MembershipService`, `OrganizationService`, `UserDirectory`, `AuditService`). One documented exception: the member list is a read-only join over memberships and users (ADR-0022). Writes always go through the owning module. Architecture tests that enforce these rules are planned for Phase 8.
 
 ## Backend
 
 - **Java 21, Spring Boot 4.1**, Maven, base package `com.l2c.nexus`. Package by feature: `api` (controllers, DTOs), `application` (services, transactions), `domain` (entities and rules), `persistence`, plus `security`, `web` and `infrastructure` where needed.
-- **Database:** Flyway owns the schema (migrations V1 to V6), Hibernate runs with `ddl-auto: validate`, `open-in-view` is disabled.
+- **Database:** 9, Hibernate runs with `ddl-auto: validate`, `open-in-view` is disabled.
 - **Errors:** Problem Details (RFC 9457), including security-layer errors. Feature handlers are ordered before the global catch-all.
 - **Time:** UTC everywhere, `timestamptz` in the database, an injected `Clock` in code.
-- **Concurrency:** optimistic locking (`@Version`) on mutable entities, a per-organization row lock for membership changes, atomic conditional updates for single-use tokens and invitations.
+- **Concurrency:** optimistic locking (`@Version`) on mutable entities; a per-organization row lock for membership changes, department assignments and request-number allocation (taken first, in that order, to avoid deadlocks); a shared row lock on a department while something is being attached to it; atomic conditional updates for single-use tokens and invitations.
 - **Audit:** recorded in the business transaction through one service; see ADR-0017.
 - **Formatting:** Spotless with google-java-format (AOSP style), enforced in `mvn verify`.
 
@@ -102,4 +108,4 @@ Rules: arrows point at what a module may use; nothing depends on `team`. `shared
 
 ## Decisions
 
-See [docs/decisions](decisions/README.md) for the ADRs (0001 to 0023): modular monolith, stack, session authentication, tenant isolation, disclosure policy, platform admin separation, authorization, errors and time, identifiers, workflow and concurrency, tokens, audit design and recording, frontend architecture, registration, login, rate limiting, organizations and account checks, the tenant gate, invitations, member administration, and the frontend routes and UI.
+See [docs/decisions](decisions/README.md) for the ADRs (0001 to 0026): modular monolith, stack, session authentication, tenant isolation, disclosure policy, platform admin separation, authorization, errors and time, identifiers, workflow and concurrency, tokens, audit design and recording, frontend architecture, registration, login, rate limiting, organizations and account checks, the tenant gate, invitations, member administration, and the frontend routes and UI, departments, department assignments and service requests.

@@ -7,7 +7,7 @@ This document describes what the code does today, not what we hope it does. Deci
 
 | Threat | Mitigation | Status |
 |---|---|---|
-| Cross-tenant data access (IDOR) | Organization in the URL path, membership gate before any controller, organization-scoped queries, composite foreign keys, a shared isolation test battery and a route-inventory test (ADR-0004, ADR-0019) | [built] for organizations, members and invitations; every new endpoint must reuse the harness |
+| Cross-tenant data access (IDOR) | Organization in the URL path, membership gate before any controller, organization-scoped queries, composite foreign keys, a shared isolation test battery and a route-inventory test (ADR-0004, ADR-0019) | [built] for organizations, members, invitations, departments, department assignments and service requests; every new endpoint must reuse the harness |
 | Role escalation | One role-grant policy used by invitations and member changes; nobody changes their own role; an organization always keeps an Owner (ADR-0007, ADR-0022) | [built] |
 | Lost updates and races between administrators | Per-organization row lock, caller re-check under the lock, per-member version (409), optimistic locking backstop (ADR-0022) | [built] |
 | Password guessing and credential stuffing | bcrypt, per-IP and per-account rate limits, generic errors (ADR-0015, ADR-0016) | [built] |
@@ -82,7 +82,7 @@ Supporting measures:
   - `fk_invitations_inviter`: an invitation's inviter must be a member of the **same** organization.
   - `fk_dm_department` and `fk_dm_membership` on `department_memberships`: a member of one organization cannot be assigned to a department of another, in either direction.
     Every later tenant table (requests and their history) follows the same pattern.
-- Tests: a reusable fixture of two organizations and seven users, a standard isolation battery (`assertIsolated`) applied to every tenant endpoint, and an inventory test that fails if any `/api/orgs/{id}/...` route is reachable by a non-member. Schema tests also insert cross-tenant rows directly with SQL and assert that the foreign keys reject them.
+- Tests: a reusable fixture of two organizations and seven users, a standard isolation battery (`assertIsolated`) applied to every tenant endpoint (organizations, members, invitations, departments, department assignments, requests), and an inventory test that fails if any `/api/orgs/{id}/...` route is reachable by a non-member. Schema tests also insert cross-tenant rows directly with SQL and assert that the foreign keys reject them. Tests also use foreign ids: an id that belongs to another organization (a member, invitation, department or request) is "not found" through every path.
 
 ## Authorization [built]
 
@@ -94,6 +94,7 @@ Roles belong to a **membership** (one per user per organization), so one person 
 | REQUEST_VIEW_ALL, REQUEST_REVIEW | yes | yes | yes | no |
 | ORGANIZATION_UPDATE, MEMBER_INVITE, MEMBER_REVOKE, ROLE_ASSIGN, DEPARTMENT_MANAGE, AUDIT_VIEW | yes | yes | no | no |
 
+Viewing your own service requests needs no permission beyond membership. REQUEST_VIEW_ALL widens it to every request in the organization.
 Rules beyond the matrix (ADR-0007, ADR-0022):
 
 - **Granting roles:** an Owner may grant any role; an Admin only Manager or Employee; nobody else grants anything. The same rule decides who may revoke or replace an invitation and who may change or remove a member: you may only touch roles you could grant yourself.
@@ -111,12 +112,22 @@ Rules beyond the matrix (ADR-0007, ADR-0022):
 - One pending invitation per (organization, email), enforced by a partial unique index; inviting again replaces the pending one.
 - The email is sent after the transaction commits, so it never refers to an invitation that was rolled back.
 - The invited address is never written to the audit log.
+- 
+## Departments and service requests [built, API only]
+
+- **Departments:** every member can view; Owners and Admins can create, update, deactivate and reactivate (DEPARTMENT_VIEW / DEPARTMENT_MANAGE). Names are unique per organization ignoring case (unique index, with a friendly 409 on top). Departments are never deleted. Updates carry the version the client saw.
+- **Department assignments:** only Owners and Admins change them; every member can view. A database foreign-key pair keeps both the member and the department inside the row's organization. Assigning shares the organization lock with member administration and locks the department, so it cannot race with removing the member or deactivating the department. Removing or leaving an organization clears the member's assignments.
+- **Request visibility:** an employee sees only their own requests; Owners, Admins and Managers (REQUEST_VIEW_ALL) see all requests of the organization. Visibility is part of the SQL query, and filters can narrow but never widen it. A request the caller may not see returns `404`, the same as a request that does not exist.
+- **Request editing:** only the creator, only while the request is a draft or sent back. Owners and Admins cannot edit other people's requests (403 `NOT_REQUEST_OWNER`); a stale version or a non-editable status returns a 409 with a code.
+- **Request creation:** the reference number is allocated under the organization lock, the creator's membership is re-read after taking it (a just-removed member cannot create), and the department is locked in share mode while it is attached. Creating is rate limited per member.
+- **Input handling:** titles and names reject control characters; descriptions allow newlines and tabs only; due dates must be today or later and within ten years (unless unchanged). Search text is bound as a parameter and its `%`, `_` and `\` characters match themselves. Sort columns come from a whitelist.
+- **Not built yet:** submitting, reviewing and assigning requests; deleting or cancelling drafts.
 
 ## Audit log [built, partial]
 
 - Events recorded in the **same transaction** as the change (the service refuses to run outside one), so a change and its record commit or roll back together.
 - Each event type has an **allow-list** of metadata keys; unknown keys, null values and long values are rejected. Emails, tokens and passwords cannot reach the log.
-- Events today: user email verified, organization created, invitation created, revoked, accepted and rejected, member role changed, member removed, member left.
+- Events today: user email verified; organization created; invitation created, revoked, accepted and rejected; member role changed, removed and left; department created, updated (old and new name), deactivated and reactivated; member added to and removed from a department (membership id only). Drafts of service requests are private working state and are not audited; request events and audit events start with submission and review (approval phase).removed, member left.
 - The table is append-only (triggers reject UPDATE, DELETE and TRUNCATE) and has no foreign keys, so history outlives what it describes.
 - **Not built yet:** the endpoint and screen that let Owners and Admins read the log, request and approval events (Phase 6), and platform-level events.
 
@@ -133,7 +144,7 @@ All errors are Problem Details (RFC 9457, `application/problem+json`), including
 
 Honest list, in rough priority order:
 
-1. **Tenant isolation is proven for what exists** (organizations, members, invitations). Departments, requests, approvals and the dashboard must each pass the same harness when they are built.
+1. **Tenant isolation is proven for what exists** (organizations, members, invitations, departments, assignments, requests). Approvals and the dashboard must each pass the same harness when they are built.
 2. **No platform administration yet.** An organization can only be suspended through the database; the platform endpoints (metadata only, audited) are planned.
 3. **`Secure` cookie flag** must be enabled for the session cookie in every HTTPS deployment (Phase 9 checklist). The CSRF cookie gets no explicit `SameSite` attribute yet (browsers treat it as `Lax`).
 4. **Missing response headers:** a `Referrer-Policy` is needed because invitation and verification tokens appear in page URLs; a Content-Security-Policy and a full header review are part of Phase 8.
@@ -146,5 +157,6 @@ Honest list, in rough priority order:
 11. **Logging policy** (what may appear in logs, including addresses inside third-party error messages) is not formalized yet.
 12. **OpenAPI exposure:** springdoc endpoints exist but are reachable only after authentication; the per-environment policy is undecided.
 13. **No row-level security** yet; planned as defense in depth (Phase 8). **No Maven vulnerability scan** in CI yet.
+14. **Service requests are incomplete:** no submit or review actions yet, no way to assign or withdraw a request, and drafts cannot be deleted. Creators cannot change a request's reference number or creator; there is no history of draft edits.
 
 Nothing here has had an external security review. This project should not be treated as production-ready.

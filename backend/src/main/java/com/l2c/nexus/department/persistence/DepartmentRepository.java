@@ -28,4 +28,10 @@ public interface DepartmentRepository extends JpaRepository<Department, UUID> {
     @Query("select d from Department d where d.id = :id and d.organizationId = :org")
     Optional<Department> lockByIdAndOrganizationId(
             @Param("id") UUID id, @Param("org") UUID organizationId);
+
+    /** SELECT ... FOR SHARE: many readers at once, but it blocks a concurrent deactivation. */
+    @Lock(LockModeType.PESSIMISTIC_READ)
+    @Query("select d from Department d where d.id = :id and d.organizationId = :org")
+    Optional<Department> lockSharedByIdAndOrganizationId(
+            @Param("id") UUID id, @Param("org") UUID organizationId);
 }

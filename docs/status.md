@@ -1,6 +1,6 @@
 # MVP status
 
-Checked against the original acceptance criteria. Updated at the end of each phase. Last update: end of Phase 4.
+Checked against the original acceptance criteria. Updated at the end of each phase. Last update: Phase 5, step 3 (service requests, API and tests).
 
 ## Acceptance criteria
 
@@ -8,10 +8,8 @@ Checked against the original acceptance criteria. Updated at the end of each pha
 |---|---|---|
 | A developer can start the application from a clean checkout using documented instructions | Done | README quick start, tested from a fresh clone |
 | The database can be created and migrated reproducibly | Done | Flyway V1 to V6, Testcontainers runs every migration on a fresh PostgreSQL |
-| Users can belong to multiple organizations | Done | Membership per (user, organization); organization selector and switcher |
-| Organization membership and role checks are enforced on the server | Done | Tenant gate, permission policy, role-grant rules |
-| Cross-tenant read and write attempts are tested and rejected | Done for existing endpoints | Isolation battery on organizations, members, invitations; route-inventory test; membership-id and invitation-id cross-tenant tests |
-| Users can create, submit, review, approve, reject and track internal service requests | Not yet | Phases 5 and 6 |
+| Users can create, submit, review, approve, reject and track internal service requests | Partly | Create, view, edit, filter and paginate are built (API and tests); submit and review come in the approval phase; screens come next || Organization membership and role checks are enforced on the server | Done | Tenant gate, permission policy, role-grant rules |
+| Cross-tenant read and write attempts are tested and rejected | Done for everything built so far | Isolation battery on organizations, members, invitations, departments, assignments and requests; route-inventory test; foreign-id tests; raw-SQL tests of every composite foreign key || Users can create, submit, review, approve, reject and track internal service requests | Not yet | Phases 5 and 6 |
 | Important actions are auditable | Partly | Eight event families recorded; request and approval events and the audit viewer come in Phase 6 |
 | The React frontend handles validation, loading and errors | Done for existing screens | Component tests for each state |
 | Backend and frontend checks run in CI | Done | GitHub Actions: build, test, format, lint, audit |
@@ -23,8 +21,8 @@ Checked against the original acceptance criteria. Updated at the end of each pha
 
 | Test | Status |
 |---|---|
-| User A cannot read Organization B's request | Harness ready; arrives with requests (Phase 5) |
-| User A cannot modify Organization B's request | Same |
+| User A cannot read Organization B's request | Done: request detail and list are tested for outsiders, foreign ids and other members of the same organization |
+| User A cannot modify Organization B's request | Done: editing is tested through the foreign organization's path, through its own path, and by non-creators |
 | A manager cannot perform owner-only operations | Done: managers and employees cannot invite or change roles; admins cannot touch owners or grant admin |
 | An invitation cannot be accepted by an unauthorized account | Done: wrong account, expired, replayed and revoked all fail identically |
 | A revoked member cannot continue accessing protected resources | Done: tested for removal, leaving and direct revocation |
@@ -36,8 +34,8 @@ Checked against the original acceptance criteria. Updated at the end of each pha
 |---|---|
 | A. Identity and authentication | Complete (password reset deferred) |
 | B. Organizations and memberships | Complete: create, list, switch, invite, accept or reject, change and revoke roles, leave. Organization settings and rename are not built |
-| C. Departments | Backend done; assignments and UI in progress. |
-| D. Internal service requests | Phase 5 |
+| C. Departments | API complete (create, list, update, deactivate, assign members); screens next |
+| D. Internal service requests | Create, view, edit drafts, filter, paginate (API); submit comes with the approval phase; screens next |
 | E. Approval workflow | Phase 6 |
 | F. Audit history | Recording built; viewing in Phase 6 |
 | G. Dashboard | Phase 7 |
@@ -56,3 +54,7 @@ Scheduled so nothing is forgotten:
 8. **Playwright** end-to-end tests for the main workflows (Phase 9).
 9. **Maven vulnerability scan** in CI (Phase 8).
 10. **Deployment:** HTTPS, `Secure` cookies, restricted database runtime role, backups, logs and health checks (Phase 9).
+11. **Frontend for departments and requests** (Phase 5, step 4).
+12. **Assignee API and the "assigned to me" index** (approval phase).
+13. **Cancel or delete drafts** (decide with the workflow).
+14. **LIKE escaping is duplicated** in the department and request search classes; consolidate into one tested helper.
