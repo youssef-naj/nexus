@@ -1,6 +1,6 @@
 # Data model
 
-Implemented through Flyway migrations **V1 to V9**: `users`, `user_tokens`, `spring_session`, `audit_logs`, `organizations`, `memberships`, `invitations`, `departments`, `department_memberships` and `service_requests`. Request events (the history of each request) arrive with the approval phase.
+Implemented through Flyway migrations **V1 to V10**: `users`, `user_tokens`, `spring_session`, `audit_logs`, `organizations`, `memberships`, `invitations`, `departments`, `department_memberships`, `service_requests` and `request_events`.
 
 ## Entity relationship diagram (target model)
 
@@ -143,11 +143,11 @@ erDiagram
 | `departments` | Organization-scoped groupings, deactivated rather than deleted. | **Implemented (V7)** |
 | `department_memberships` | Assigns members to departments. Composite foreign keys keep both sides in the row's organization. | **Implemented (V8)** |
 | `service_requests` | The business object that moves through the approval workflow. Drafts only until the workflow phase. | **Implemented (V9)** |
-| `request_events` | Append-only history of each request transition. | Planned (approval phase) |
+| `request_events` | Append-only history of each request transition (actor, action, from and to status, comment). Composite foreign keys to the request and the actor; triggers reject UPDATE, DELETE and TRUNCATE. | **Implemented (V10)** |
 
 ## Key design decisions
 
-**Tenant ownership is enforced by the database.** `memberships` exposes `UNIQUE (organization_id, id)`; tenant tables reference memberships (and later departments) with **composite foreign keys**. A row for Organization A therefore cannot reference a member of Organization B, even if application code is wrong. Live examples, each tested directly with raw SQL: `fk_invitations_inviter` (invitations), `fk_dm_department` and `fk_dm_membership` (department assignments), and `fk_requests_creator`, `fk_requests_assignee` and `fk_requests_department` (service requests). A NULL assignee or department simply skips its key, which is how "optional" is expressed.
+**Tenant ownership is enforced by the database.** `memberships` exposes `UNIQUE (organization_id, id)`; tenant tables reference memberships (and later departments) with **composite foreign keys**. A row for Organization A therefore cannot reference a member of Organization B, even if application code is wrong. Live examples, each tested directly with raw SQL: `fk_invitations_inviter` (invitations), `fk_dm_department` and `fk_dm_membership` (department assignments), `fk_requests_creator`, `fk_requests_assignee` and `fk_requests_department` (service requests), and `fk_request_events_request` and `fk_request_events_actor` (request history). A NULL assignee or department simply skips its key, which is how "optional" is expressed.
 
 **Tenant tables reference memberships, not users.** A creator, assignee or reviewer must be a member of that organization. Because memberships are never deleted, history stays valid after a member is revoked or leaves.
 
@@ -160,6 +160,8 @@ erDiagram
 **Status values** are text with CHECK constraints, not database enum types, so adding a value is a simple migration.
 
 **Requests:** the creator is a membership, so a request keeps its history when its creator leaves. Statuses and categories are CHECK constraints. `UNIQUE (organization_id, id)` on requests is the target for the composite key of request events. Reference numbers are unique per organization and come from the organization's counter.
+
+**Request history:** `request_events` rows are never changed or removed (database triggers, as for the audit log), and the table has real foreign keys, because a request's history must stay attached to the request and the actor inside one organization. Unlike `audit_logs`, it holds the free-text review comments and is readable by anyone who can see the request.
 
 **Invariants in the database, not only in code:** unique membership per user and organization; valid roles and statuses; slug format; at most one pending invitation per (organization, email) through a partial unique index; an invitation's decision time is set exactly when it is no longer pending.
 
@@ -188,7 +190,7 @@ Indexes exist only for a named query. Planned ones must be verified with `EXPLAI
 | `service_requests` | `ix_requests_org_status_created` on `(organization_id, status, created_at DESC)` | Request list filtered by status; dashboard counts | Implemented |
 | `service_requests` | `ix_requests_org_creator_created` on `(organization_id, created_by_membership_id, created_at DESC)` | "My requests" and the employee's restricted list | Implemented |
 | `service_requests` | `(organization_id, assignee_membership_id)` | "Assigned to me" | Planned: added when that query exists |
-| `request_events` | `(request_id, occurred_at)` | Request history timeline | Planned |
+| `request_events` | `ix_request_events_request_time` on `(organization_id, request_id, occurred_at)` | A request's history, oldest first | Implemented |
 
 ## Request reference numbers
 

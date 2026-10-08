@@ -2,7 +2,7 @@
 
 A multi-tenant **Business Operations SaaS** platform. Independent organizations share one application and manage their members, departments, internal service requests, approval workflows and audit history, with **strict tenant isolation**: a user of Organization A can never access Organization B's private data.
 
-> **Status: Phase 5 complete (departments and service requests).** You can register, verify your email, create organizations, invite people, manage members and roles, organize members into departments, and create, edit, filter and search service requests, with tenant isolation enforced and tested. Submitting and reviewing requests, the audit viewer and the dashboard are **not implemented yet**. See [Status and roadmap](#status-and-roadmap) and [docs/status.md](docs/status.md).
+> > **Status: Phase 6 in progress (approval workflow: backend done, screens and audit viewer next).** You can register, verify your email, create organizations, invite people, manage members and roles, organize members into departments, create service requests, and (through the API) submit and review them with a full history, with tenant isolation enforced and tested. The workflow screens, the audit viewer and the dashboard are **not implemented yet**. See [Status and roadmap](#status-and-roadmap) and [docs/status.md](docs/status.md).
 
 ## What exists today
 
@@ -10,6 +10,7 @@ A multi-tenant **Business Operations SaaS** platform. Independent organizations 
 - Organizations: create (you become Owner), list, switch between them (the organization is part of the URL), leave.
 - A server-side **tenant gate**: outsiders get a `404` identical to "does not exist". Role-based permissions per membership.
 - Invitations by email (hashed single-use tokens, accepted only by the invited verified account), member list, role changes, removal, with no role escalation, no self-management, and an organization always keeps an Owner.
+- An approval workflow in the API: submit, approve, reject and request changes, with required comments, an append-only history per request, a rule that nobody reviews their own request, and protection against two reviewers deciding at once.
 - Departments (create, search, update, deactivate, assign and remove members) and internal service requests (reference numbers such as `REQ-000042`, drafts, editing by the creator, filtering, search, pagination), with screens and API.- An append-only audit log written in the same transaction as each change.
 - React + TypeScript frontend for all of the above, with loading, empty, validation and error states.
 - Integration tests against a real PostgreSQL (Testcontainers), a reusable cross-tenant isolation test battery, frontend component tests, formatting and lint checks, GitHub Actions CI and Dependabot.
@@ -17,7 +18,8 @@ A multi-tenant **Business Operations SaaS** platform. Independent organizations 
 
 ## Planned features (MVP)
 
-Submitting and reviewing requests (approve, reject, request changes), the audit history viewer, and an organization dashboard. See [docs/architecture.md](docs/architecture.md) and [docs/status.md](docs/status.md).
+The workflow screens (submit, review, history), the audit history viewer, and an organization dashboard. See [docs/architecture.md](docs/architecture.md) and [docs/status.md](docs/status.md).
+
 ## Tech stack
 
 | Area | Choice |
@@ -188,14 +190,14 @@ nexus/
 | 3 | Organizations and tenant isolation | Done |
 | 4 | Memberships, invitations, roles | Done |
 | 5 | Departments and service requests | Done |
-| 6 | Approval workflow and audit history | Next |
+| 6 | Approval workflow and audit history | In progress (workflow backend done) |
 | 7 | React dashboard and user experience | Planned |
 | 8 | Security hardening and testing | Planned |
 | 9 | Deployment, documentation, demonstration | Planned |
 
 ## Known limitations
 
-- No way to submit or review a request yet, no audit viewer, no dashboard; no platform administration; organization settings are not editable.- No password reset, MFA, or "sign out everywhere". Rate limiting is per application instance and in memory.
+- No screens yet for submitting or reviewing requests, no audit viewer, no dashboard; requests cannot be assigned or withdrawn; no platform administration; organization settings are not editable.
 - No demo accounts, screenshots or deployment guide yet.
 - See [docs/security.md](docs/security.md) for the full, honest list of remaining security work.
 - Not production-ready. Nothing here has been security-reviewed or deployed.

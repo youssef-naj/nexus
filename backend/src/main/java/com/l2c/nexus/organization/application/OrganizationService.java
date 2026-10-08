@@ -140,4 +140,13 @@ public class OrganizationService {
     public void lockForMembershipChanges(UUID organizationId) {
         organizations.lockById(organizationId).orElseThrow(NotFoundException::new);
     }
+
+    /**
+     * A shared lock for actions that depend on the caller's current role (review decisions): many
+     * run at once, but a role change or removal waits for them and they wait for it.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void lockSharedForActions(UUID organizationId) {
+        organizations.lockSharedById(organizationId).orElseThrow(NotFoundException::new);
+    }
 }

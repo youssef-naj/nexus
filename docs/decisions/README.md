@@ -29,5 +29,6 @@ Short records of the significant decisions made for Nexus. Each ADR states the c
 | [0025](0025-department-assignments.md) | Department assignments | Accepted |
 | [0026](0026-service-requests.md) | Service requests | Accepted |
 | [0027](0027-departments-and-requests-ui.md) | Departments and requests UI | Accepted |
+| [0028](0028-approval-workflow.md) | Approval workflow | Accepted |
 
 Use [0000-template.md](0000-template.md) for new records.

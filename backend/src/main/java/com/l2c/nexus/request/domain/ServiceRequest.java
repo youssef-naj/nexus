@@ -104,6 +104,14 @@ public class ServiceRequest {
         this.updatedAt = now;
     }
 
+    public void applyTransition(RequestAction action, Instant now) {
+        if (!action.allowedFrom(status)) {
+            throw new IllegalStateException("Cannot " + action + " a request that is " + status);
+        }
+        this.status = action.target();
+        this.updatedAt = now;
+    }
+
     public UUID getId() {
         return id;
     }

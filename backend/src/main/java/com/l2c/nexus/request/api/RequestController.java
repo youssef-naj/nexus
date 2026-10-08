@@ -2,6 +2,7 @@ package com.l2c.nexus.request.api;
 
 import com.l2c.nexus.organization.application.OrgContext;
 import com.l2c.nexus.organization.web.CurrentOrg;
+import com.l2c.nexus.request.application.RequestWorkflowService;
 import com.l2c.nexus.request.application.ServiceRequestService;
 import com.l2c.nexus.request.application.ServiceRequestService.ListCriteria;
 import com.l2c.nexus.request.application.ServiceRequestService.RequestInput;
@@ -9,9 +10,11 @@ import com.l2c.nexus.request.application.ServiceRequestService.RequestPage;
 import com.l2c.nexus.request.domain.RequestCategory;
 import com.l2c.nexus.request.domain.RequestSort;
 import com.l2c.nexus.request.domain.RequestStatus;
+import com.l2c.nexus.request.persistence.RequestDetail;
 import com.l2c.nexus.shared.web.PageResponse;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -32,9 +35,11 @@ import org.springframework.web.bind.annotation.RestController;
 class RequestController {
 
     private final ServiceRequestService service;
+    private final RequestWorkflowService workflow;
 
-    RequestController(ServiceRequestService service) {
+    RequestController(ServiceRequestService service, RequestWorkflowService workflow) {
         this.service = service;
+        this.workflow = workflow;
     }
 
     /** sort is CREATED (default), UPDATED or DUE_DATE; direction is DESC (default) or ASC. */
@@ -84,12 +89,12 @@ class RequestController {
     @ResponseStatus(HttpStatus.CREATED)
     RequestDetailResponse create(
             @CurrentOrg OrgContext org, @Valid @RequestBody RequestPayload payload) {
-        return RequestDetailResponse.from(service.create(org, input(payload)), org.membershipId());
+        return respond(org, service.create(org, input(payload)));
     }
 
     @GetMapping("/{requestId}")
     RequestDetailResponse get(@CurrentOrg OrgContext org, @PathVariable UUID requestId) {
-        return RequestDetailResponse.from(service.get(org, requestId), org.membershipId());
+        return respond(org, service.get(org, requestId));
     }
 
     @PutMapping("/{requestId}")
@@ -104,8 +109,29 @@ class RequestController {
                         payload.category(),
                         payload.dueDate(),
                         payload.departmentId());
+        return respond(org, service.update(org, requestId, input, payload.version()));
+    }
+
+    /** Submit, approve, reject or request changes. The version must be the one the user saw. */
+    @PostMapping("/{requestId}/transitions")
+    RequestDetailResponse transition(
+            @CurrentOrg OrgContext org,
+            @PathVariable UUID requestId,
+            @Valid @RequestBody TransitionPayload payload) {
+        return respond(
+                org,
+                workflow.transition(
+                        org, requestId, payload.action(), payload.version(), payload.comment()));
+    }
+
+    @GetMapping("/{requestId}/events")
+    List<RequestEventResponse> events(@CurrentOrg OrgContext org, @PathVariable UUID requestId) {
+        return workflow.history(org, requestId).stream().map(RequestEventResponse::from).toList();
+    }
+
+    private RequestDetailResponse respond(OrgContext org, RequestDetail detail) {
         return RequestDetailResponse.from(
-                service.update(org, requestId, input, payload.version()), org.membershipId());
+                detail, org.membershipId(), workflow.availableActions(org, detail));
     }
 
     private static RequestInput input(RequestPayload payload) {

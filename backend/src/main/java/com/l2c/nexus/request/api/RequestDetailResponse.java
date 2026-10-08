@@ -1,13 +1,18 @@
 package com.l2c.nexus.request.api;
 
+import com.l2c.nexus.request.domain.RequestAction;
 import com.l2c.nexus.request.domain.RequestCategory;
 import com.l2c.nexus.request.domain.RequestStatus;
 import com.l2c.nexus.request.persistence.RequestDetail;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
-/** "editable" tells the UI whether THIS viewer may edit now (creator, and a draft or sent back). */
+/**
+ * "editable" and "actions" tell the UI what THIS viewer may do now. They are hints computed by the
+ * server; every action is authorized again when it is used.
+ */
 public record RequestDetailResponse(
         UUID id,
         String reference,
@@ -25,9 +30,11 @@ public record RequestDetailResponse(
         Instant createdAt,
         Instant updatedAt,
         long version,
-        boolean editable) {
+        boolean editable,
+        List<RequestAction> actions) {
 
-    static RequestDetailResponse from(RequestDetail detail, UUID viewerMembershipId) {
+    static RequestDetailResponse from(
+            RequestDetail detail, UUID viewerMembershipId, List<RequestAction> actions) {
         boolean editable =
                 detail.createdByMembershipId().equals(viewerMembershipId)
                         && detail.status().isEditable();
@@ -48,6 +55,7 @@ public record RequestDetailResponse(
                 detail.createdAt(),
                 detail.updatedAt(),
                 detail.version(),
-                editable);
+                editable,
+                actions);
     }
 }

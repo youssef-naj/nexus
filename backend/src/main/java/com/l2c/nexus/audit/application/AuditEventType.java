@@ -21,7 +21,11 @@ public enum AuditEventType {
     DEPARTMENT_DEACTIVATED(),
     DEPARTMENT_REACTIVATED(),
     DEPARTMENT_MEMBER_ADDED("membershipId"),
-    DEPARTMENT_MEMBER_REMOVED("membershipId");
+    DEPARTMENT_MEMBER_REMOVED("membershipId"),
+    REQUEST_SUBMITTED("reference"),
+    REQUEST_APPROVED("reference"),
+    REQUEST_REJECTED("reference"),
+    REQUEST_CHANGES_REQUESTED("reference");
 
     private final Set<String> allowedMetadataKeys;
 

@@ -17,4 +17,9 @@ public interface OrganizationRepository extends JpaRepository<Organization, UUID
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select o from Organization o where o.id = :id")
     Optional<Organization> lockById(@Param("id") UUID id);
+
+    /** SELECT ... FOR SHARE: many readers at once, but it blocks a concurrent role change. */
+    @Lock(LockModeType.PESSIMISTIC_READ)
+    @Query("select o from Organization o where o.id = :id")
+    Optional<Organization> lockSharedById(@Param("id") UUID id);
 }

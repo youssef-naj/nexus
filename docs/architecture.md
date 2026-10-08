@@ -26,12 +26,11 @@ flowchart LR
       TEAM["team: invitations + member admin [built]"]
       AUD["audit [built]"]
       DEP["department [built]"]
-      REQ["request [built: drafts, no submission yet]"]
-      APP["approval workflow [planned]"]
+      REQ["request + approval workflow [built]"]
       DASH["dashboard [planned]"]
     end
   end
-  DB[("PostgreSQL 17<br/>Flyway migrations V1-V9 [built]")]
+  DB[("PostgreSQL 17<br/>Flyway migrations V1-V10 [built]")]
   MAIL["Mailpit, dev email [built]"]
 
   B --> P --> SEC --> GATE --> API --> Modules
@@ -57,6 +56,7 @@ flowchart TD
   request --> organization
   request --> membership
   request --> department
+  request --> audit
   team --> organization
   team --> membership
   team --> identity
@@ -74,7 +74,7 @@ Rules: arrows point at what a module may use; nothing depends on `team`. `shared
 - **Database:** 9, Hibernate runs with `ddl-auto: validate`, `open-in-view` is disabled.
 - **Errors:** Problem Details (RFC 9457), including security-layer errors. Feature handlers are ordered before the global catch-all.
 - **Time:** UTC everywhere, `timestamptz` in the database, an injected `Clock` in code.
-- **Concurrency:** optimistic locking (`@Version`) on mutable entities; a per-organization row lock for membership changes, department assignments and request-number allocation (taken first, in that order, to avoid deadlocks); a shared row lock on a department while something is being attached to it; atomic conditional updates for single-use tokens and invitations.
+- - **Concurrency:** optimistic locking (`@Version`) on mutable entities; one fixed lock order, **organization row first**, then the request or department row. The organization is locked exclusively for membership changes, department assignments and request-number allocation, and in shared mode for review decisions (so many decisions run in parallel but a role change waits for them). A shared lock on a department protects attaching it to a request; the request row is locked for transitions; atomic conditional updates protect single-use tokens and invitations.
 - **Audit:** recorded in the business transaction through one service; see ADR-0017.
 - **Formatting:** Spotless with google-java-format (AOSP style), enforced in `mvn verify`.
 
@@ -108,4 +108,4 @@ Rules: arrows point at what a module may use; nothing depends on `team`. `shared
 
 ## Decisions
 
-See [docs/decisions](decisions/README.md) for the ADRs (0001 to 0027): modular monolith, stack, session authentication, tenant isolation, disclosure policy, platform admin separation, authorization, errors and time, identifiers, workflow and concurrency, tokens, audit design and recording, frontend architecture, registration, login, rate limiting, organizations and account checks, the tenant gate, invitations, member administration, and the frontend routes and UI, departments, department assignments and service requests, and the departments and requests UI
+See [docs/decisions](decisions/README.md) for the ADRs (0001 to 0028): modular monolith, stack, session authentication, tenant isolation, disclosure policy, platform admin separation, authorization, errors and time, identifiers, workflow and concurrency, tokens, audit design and recording, frontend architecture, registration, login, rate limiting, organizations and account checks, the tenant gate, invitations, member administration, and the frontend routes and UI, departments, department assignments and service requests, and the departments and requests UI

@@ -9,6 +9,7 @@ This document describes what the code does today, not what we hope it does. Deci
 |---|---|---|
 | Cross-tenant data access (IDOR) | Organization in the URL path, membership gate before any controller, organization-scoped queries, composite foreign keys, a shared isolation test battery and a route-inventory test (ADR-0004, ADR-0019) | [built] for organizations, members, invitations, departments, department assignments and service requests; every new endpoint must reuse the harness |
 | Role escalation | One role-grant policy used by invitations and member changes; nobody changes their own role; an organization always keeps an Owner (ADR-0007, ADR-0022) | [built] |
+| Unauthorized or self-approval of requests | Review needs REQUEST_REVIEW and is refused for the request's own creator; decisions carry the version the reviewer saw; transitions are validated against one table and serialized by locks (ADR-0028) | [built] |                                                                                                                                                     |         |
 | Lost updates and races between administrators | Per-organization row lock, caller re-check under the lock, per-member version (409), optimistic locking backstop (ADR-0022) | [built] |
 | Password guessing and credential stuffing | bcrypt, per-IP and per-account rate limits, generic errors (ADR-0015, ADR-0016) | [built] |
 | Account and organization enumeration | Identical responses for registration, login, invitation and organization lookups; equalized timing (ADR-0005, ADR-0014, ADR-0015) | [built] |
@@ -122,13 +123,22 @@ Rules beyond the matrix (ADR-0007, ADR-0022):
 - **Request creation:** the reference number is allocated under the organization lock, the creator's membership is re-read after taking it (a just-removed member cannot create), and the department is locked in share mode while it is attached. Creating is rate limited per member.
 - **Input handling:** titles and names reject control characters; descriptions allow newlines and tabs only; due dates must be today or later and within ten years (unless unchanged). Search text is bound as a parameter and its `%`, `_` and `\` characters match themselves. Sort columns come from a whitelist.
 - **Frontend:** screens show or hide controls from the member's permissions and from the server's `editable` flag on each request; these are usability hints and every action is authorized again on the server. All user-supplied text (department names, request titles and descriptions) is rendered as React text, never as HTML, which is covered by a test that renders markup-looking input. Pages for foreign or invisible departments and requests show one neutral "not found" screen, matching the server's `404`.
-- **Not built yet:** submitting, reviewing and assigning requests; deleting or cancelling drafts.
+- - **Not built yet:** assigning requests; deleting or cancelling drafts; withdrawing a submitted request.
+
+## Approval workflow [built]
+
+- **Transitions** (the only allowed ones): submit (draft or sent-back to submitted), approve, reject and request changes (submitted to approved, rejected or changes requested). Approved and rejected are final. Everything else returns `409 INVALID_TRANSITION`.
+- **Who may act:** only the creator submits (`403 NOT_REQUEST_OWNER`). Owners, Admins and Managers (REQUEST_REVIEW) decide, and nobody may review a request they created (`403 SELF_REVIEW_NOT_ALLOWED`), whatever their role. Employees cannot review at all. A request the caller may not see is `404`.
+- **No blind approvals:** every action carries the version the user saw. If the creator edited and resubmitted meanwhile, the decision is refused with `409 STALE_VERSION`.
+- **Races:** a decision takes a shared lock on the organization (so a role change or removal cannot interleave with it), re-reads the caller's current role, then locks the request row. Two reviewers acting at once produce exactly one decision; a reviewer removed a moment earlier is refused.
+- **Comments:** rejecting or requesting changes requires one. Plain text, at most 1000 characters, no control characters except line breaks and tabs. Comments live only in the request history, visible to whoever can see the request, and are never copied into the audit log.
+- **History:** every transition is a row in `request_events` (actor, action, from and to status, comment, time), append-only at the database level and tied to the request and the actor inside one organization by composite foreign keys.
 
 ## Audit log [built, partial]
 
 - Events recorded in the **same transaction** as the change (the service refuses to run outside one), so a change and its record commit or roll back together.
 - Each event type has an **allow-list** of metadata keys; unknown keys, null values and long values are rejected. Emails, tokens and passwords cannot reach the log.
-- Events today: user email verified; organization created; invitation created, revoked, accepted and rejected; member role changed, removed and left; department created, updated (old and new name), deactivated and reactivated; member added to and removed from a department (membership id only). Drafts of service requests are private working state and are not audited; request events and audit events start with submission and review (approval phase).removed, member left.
+- - Events today: user email verified; organization created; invitation created, revoked, accepted and rejected; member role changed, removed and left; department created, updated (old and new name), deactivated and reactivated; member added to and removed from a department (membership id only); request submitted, approved, rejected and changes requested (reference number only). Drafts are private working state and are not audited; review comments are never audited (they are in the request history).
 - The table is append-only (triggers reject UPDATE, DELETE and TRUNCATE) and has no foreign keys, so history outlives what it describes.
 - **Not built yet:** the endpoint and screen that let Owners and Admins read the log, request and approval events (Phase 6), and platform-level events.
 
@@ -158,6 +168,6 @@ Honest list, in rough priority order:
 11. **Logging policy** (what may appear in logs, including addresses inside third-party error messages) is not formalized yet.
 12. **OpenAPI exposure:** springdoc endpoints exist but are reachable only after authentication; the per-environment policy is undecided.
 13. **No row-level security** yet; planned as defense in depth (Phase 8). **No Maven vulnerability scan** in CI yet.
-14. **Service requests are incomplete:** no submit or review actions yet, no way to assign or withdraw a request, and drafts cannot be deleted. Creators cannot change a request's reference number or creator; there is no history of draft edits.
+14. **Service requests are incomplete:** no way to assign, reassign, withdraw or cancel a request, and drafts cannot be deleted. There is no organization setting to allow self-approval (it is always refused). The request history has no pagination (capped at 500 events). Creators cannot change a request's reference number or creator, and there is no history of draft edits.
 
 Nothing here has had an external security review. This project should not be treated as production-ready.
