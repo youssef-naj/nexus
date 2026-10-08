@@ -1,6 +1,6 @@
 # MVP status
 
-Checked against the original acceptance criteria. Updated at the end of each phase. Last update: Phase 5, step 3 (service requests, API and tests).
+Checked against the original acceptance criteria. Updated at the end of each phase. Last update: end of Phase 5 (departments and service requests, API and screens).
 
 ## Acceptance criteria
 
@@ -8,10 +8,10 @@ Checked against the original acceptance criteria. Updated at the end of each pha
 |---|---|---|
 | A developer can start the application from a clean checkout using documented instructions | Done | README quick start, tested from a fresh clone |
 | The database can be created and migrated reproducibly | Done | Flyway V1 to V6, Testcontainers runs every migration on a fresh PostgreSQL |
-| Users can create, submit, review, approve, reject and track internal service requests | Partly | Create, view, edit, filter and paginate are built (API and tests); submit and review come in the approval phase; screens come next || Organization membership and role checks are enforced on the server | Done | Tenant gate, permission policy, role-grant rules |
+| Users can create, submit, review, approve, reject and track internal service requests | Partly | Create, view, edit drafts, filter, search and paginate are built (API and screens); submit and review come in the approval phase |
 | Cross-tenant read and write attempts are tested and rejected | Done for everything built so far | Isolation battery on organizations, members, invitations, departments, assignments and requests; route-inventory test; foreign-id tests; raw-SQL tests of every composite foreign key || Users can create, submit, review, approve, reject and track internal service requests | Not yet | Phases 5 and 6 |
 | Important actions are auditable | Partly | Eight event families recorded; request and approval events and the audit viewer come in Phase 6 |
-| The React frontend handles validation, loading and errors | Done for existing screens | Component tests for each state |
+| The React frontend handles validation, loading and errors | Done for existing screens | Component tests for each state on the auth, organization, member, department and request screens |
 | Backend and frontend checks run in CI | Done | GitHub Actions: build, test, format, lint, audit |
 | API documentation and architecture diagrams are available | Partly | Architecture and ER diagrams done; OpenAPI is generated but its exposure policy is not decided |
 | The project has repeatable demo data and a clear demonstration path | Not yet | Seed data and demo accounts planned |
@@ -34,9 +34,8 @@ Checked against the original acceptance criteria. Updated at the end of each pha
 |---|---|
 | A. Identity and authentication | Complete (password reset deferred) |
 | B. Organizations and memberships | Complete: create, list, switch, invite, accept or reject, change and revoke roles, leave. Organization settings and rename are not built |
-| C. Departments | API complete (create, list, update, deactivate, assign members); screens next |
-| D. Internal service requests | Create, view, edit drafts, filter, paginate (API); submit comes with the approval phase; screens next |
-| E. Approval workflow | Phase 6 |
+| C. Departments | Complete: create, list, search, update, deactivate, assign and remove members (API and screens) |
+| D. Internal service requests | Create, view, edit drafts, filter, search, paginate (API and screens); submit comes with the approval phase || E. Approval workflow | Phase 6 |
 | F. Audit history | Recording built; viewing in Phase 6 |
 | G. Dashboard | Phase 7 |
 
@@ -54,7 +53,9 @@ Scheduled so nothing is forgotten:
 8. **Playwright** end-to-end tests for the main workflows (Phase 9).
 9. **Maven vulnerability scan** in CI (Phase 8).
 10. **Deployment:** HTTPS, `Secure` cookies, restricted database runtime role, backups, logs and health checks (Phase 9).
-11. **Frontend for departments and requests** (Phase 5, step 4).
+11. **URL-persisted filters** for the request and department lists (shareable links, back button friendly).
 12. **Assignee API and the "assigned to me" index** (approval phase).
 13. **Cancel or delete drafts** (decide with the workflow).
 14. **LIKE escaping is duplicated** in the department and request search classes; consolidate into one tested helper.
+15. **Searchable member picker** for department assignment: it loads the first 100 active members today.
+16. **Consolidate duplicated frontend helpers:** the members page still has its own pagination controls and control-character check; move it onto `PaginationBar` and `shared/forms/text.ts`, and the organization name schema onto the same text helper.

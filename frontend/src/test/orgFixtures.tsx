@@ -4,6 +4,7 @@ import { OrgLayout } from "@/features/organizations/OrgLayout"
 import { PERMISSIONS } from "@/features/organizations/permissions"
 import type { OrgRole } from "@/features/organizations/schemas"
 import { renderWithProviders } from "@/test/utils"
+import type { ReactNode } from "react"
 
 export const ORG_ID = "11111111-1111-1111-1111-111111111111"
 
@@ -73,4 +74,27 @@ export function renderOrgPage(page: ReactElement) {
     </Routes>,
     [`/orgs/${ORG_ID}/members`],
   )
+}
+
+/** Renders routes inside the real organization layout, starting at the given path. */
+export function renderOrgRoutes(routes: ReactNode, initialPath: string) {
+  return renderWithProviders(
+    <Routes>
+      <Route path="/" element={<p>Home</p>} />
+      <Route path="/orgs/:orgId" element={<OrgLayout />}>
+        <Route index element={<p>Org overview</p>} />
+        {routes}
+      </Route>
+    </Routes>,
+    [initialPath],
+  )
+}
+
+export function pageOf<T>(content: T[], overrides: Record<string, number> = {}) {
+  return { content, page: 0, size: 20, totalElements: content.length, totalPages: 1, ...overrides }
+}
+
+/** The URLs of every list request made so far (those with a query string). */
+export function requestedUrls(fetchMock: { mock: { calls: unknown[][] } }, pathEnd: string) {
+  return fetchMock.mock.calls.map(([url]) => String(url)).filter((url) => url.includes(pathEnd))
 }

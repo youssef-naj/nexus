@@ -11,6 +11,11 @@ import { OrgLayout } from "@/features/organizations/OrgLayout"
 import { OrganizationsPage } from "@/features/organizations/OrganizationsPage"
 import { AcceptInvitationPage } from "@/features/members/AcceptInvitationPage"
 import { MembersPage } from "@/features/members/MembersPage"
+import { DepartmentDetailPage } from "@/features/departments/DepartmentDetailPage"
+import { DepartmentsPage } from "@/features/departments/DepartmentsPage"
+import { RequestDetailPage } from "@/features/requests/RequestDetailPage"
+import { RequestFormPage } from "@/features/requests/RequestFormPage"
+import { RequestsPage } from "@/features/requests/RequestsPage"
 
 export const router = createBrowserRouter([
   { path: "/login", element: <LoginPage /> },
@@ -31,6 +36,12 @@ export const router = createBrowserRouter([
             children: [
               { index: true, element: <OrgDashboardPage /> },
               { path: "members", element: <MembersPage /> },
+              { path: "departments", element: <DepartmentsPage /> },
+              { path: "departments/:departmentId", element: <DepartmentDetailPage /> },
+              { path: "requests", element: <RequestsPage /> },
+              { path: "requests/new", element: <RequestFormPage /> },
+              { path: "requests/:requestId", element: <RequestDetailPage /> },
+              { path: "requests/:requestId/edit", element: <RequestFormPage /> },
             ],
           },
         ],

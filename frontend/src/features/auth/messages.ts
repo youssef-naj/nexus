@@ -1,9 +1,7 @@
 import { ApiError } from "@/shared/api/client"
+import { formatWait } from "@/shared/format"
 
-export function formatWait(seconds: number): string {
-  if (seconds < 90) return `${Math.max(1, Math.round(seconds))} seconds`
-  return `${Math.ceil(seconds / 60)} minutes`
-}
+export { formatWait }
 
 function rateLimited(error: ApiError): string {
   return error.retryAfterSeconds !== undefined

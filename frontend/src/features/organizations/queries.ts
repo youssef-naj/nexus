@@ -3,6 +3,10 @@ import { createOrganization, fetchMyOrganizations, fetchOrganization } from "./a
 
 export const organizationsQueryKey = ["organizations"] as const
 
+/** Everything cached for one organization sits under ["organizations", orgId, ...]. */
+export const orgKey = (orgId: string, ...parts: string[]) =>
+  [...organizationsQueryKey, orgId, ...parts] as const
+
 export function useMyOrganizations() {
   return useQuery({ queryKey: organizationsQueryKey, queryFn: fetchMyOrganizations })
 }

@@ -79,6 +79,10 @@ export function OrgLayout() {
         <OrgNavLink to={base} end>
           Overview
         </OrgNavLink>
+        {value.can("REQUEST_CREATE") && <OrgNavLink to={`${base}/requests`}>Requests</OrgNavLink>}
+        {value.can("DEPARTMENT_VIEW") && (
+          <OrgNavLink to={`${base}/departments`}>Departments</OrgNavLink>
+        )}
         {value.can("MEMBER_VIEW") && <OrgNavLink to={`${base}/members`}>Members</OrgNavLink>}
       </nav>
       <Outlet />

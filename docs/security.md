@@ -113,7 +113,7 @@ Rules beyond the matrix (ADR-0007, ADR-0022):
 - The email is sent after the transaction commits, so it never refers to an invitation that was rolled back.
 - The invited address is never written to the audit log.
 - 
-## Departments and service requests [built, API only]
+## Departments and service requests [built]
 
 - **Departments:** every member can view; Owners and Admins can create, update, deactivate and reactivate (DEPARTMENT_VIEW / DEPARTMENT_MANAGE). Names are unique per organization ignoring case (unique index, with a friendly 409 on top). Departments are never deleted. Updates carry the version the client saw.
 - **Department assignments:** only Owners and Admins change them; every member can view. A database foreign-key pair keeps both the member and the department inside the row's organization. Assigning shares the organization lock with member administration and locks the department, so it cannot race with removing the member or deactivating the department. Removing or leaving an organization clears the member's assignments.
@@ -121,6 +121,7 @@ Rules beyond the matrix (ADR-0007, ADR-0022):
 - **Request editing:** only the creator, only while the request is a draft or sent back. Owners and Admins cannot edit other people's requests (403 `NOT_REQUEST_OWNER`); a stale version or a non-editable status returns a 409 with a code.
 - **Request creation:** the reference number is allocated under the organization lock, the creator's membership is re-read after taking it (a just-removed member cannot create), and the department is locked in share mode while it is attached. Creating is rate limited per member.
 - **Input handling:** titles and names reject control characters; descriptions allow newlines and tabs only; due dates must be today or later and within ten years (unless unchanged). Search text is bound as a parameter and its `%`, `_` and `\` characters match themselves. Sort columns come from a whitelist.
+- **Frontend:** screens show or hide controls from the member's permissions and from the server's `editable` flag on each request; these are usability hints and every action is authorized again on the server. All user-supplied text (department names, request titles and descriptions) is rendered as React text, never as HTML, which is covered by a test that renders markup-looking input. Pages for foreign or invisible departments and requests show one neutral "not found" screen, matching the server's `404`.
 - **Not built yet:** submitting, reviewing and assigning requests; deleting or cancelling drafts.
 
 ## Audit log [built, partial]

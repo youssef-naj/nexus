@@ -25,8 +25,8 @@ flowchart LR
       MEM["membership [built]"]
       TEAM["team: invitations + member admin [built]"]
       AUD["audit [built]"]
-      DEP["department [built, API only]"]
-      REQ["request [built, API only]"]
+      DEP["department [built]"]
+      REQ["request [built: drafts, no submission yet]"]
       APP["approval workflow [planned]"]
       DASH["dashboard [planned]"]
     end
@@ -91,9 +91,9 @@ Rules: arrows point at what a module may use; nothing depends on `team`. `shared
 ## Frontend
 
 - React, TypeScript (strict, plus `noUncheckedIndexedAccess`), Vite, Tailwind CSS and shadcn/ui (Base UI primitives).
-- **Feature-oriented structure:** `src/app`, `src/features/<name>` (auth, organizations, members, system), `src/shared`, `src/components/ui`.
+- **Feature-oriented structure:** `src/app`, `src/features/<name>` (auth, organizations, members, departments, requests, system), `src/shared`, `src/components/ui`.
 - **Server state** with TanStack Query (everything for one organization is cached under `["organizations", orgId, ...]`, so logout clears it), **forms** with React Hook Form and Zod, **routing** with React Router. The organization is part of the route (`/orgs/:orgId/...`).
-- One API client (`apiFetch`): same-origin cookies, CSRF header for unsafe methods, typed problem-detail errors with `code` and `Retry-After`, Zod validation of responses at the boundary.
+- Shared UI and API helpers: a query-string builder, the page-envelope schema, common error wording, a pagination bar, text and textarea fields with accessible error messages, and a form-error mapper that places server field errors under their fields. Lists keep their filter state in component state; everything cached for an organization sits under one key prefix, so logout clears it.
 - Permission-based controls are usability hints only. Authorization is enforced on the server.
 
 ## Quality gates
@@ -108,4 +108,4 @@ Rules: arrows point at what a module may use; nothing depends on `team`. `shared
 
 ## Decisions
 
-See [docs/decisions](decisions/README.md) for the ADRs (0001 to 0026): modular monolith, stack, session authentication, tenant isolation, disclosure policy, platform admin separation, authorization, errors and time, identifiers, workflow and concurrency, tokens, audit design and recording, frontend architecture, registration, login, rate limiting, organizations and account checks, the tenant gate, invitations, member administration, and the frontend routes and UI, departments, department assignments and service requests.
+See [docs/decisions](decisions/README.md) for the ADRs (0001 to 0027): modular monolith, stack, session authentication, tenant isolation, disclosure policy, platform admin separation, authorization, errors and time, identifiers, workflow and concurrency, tokens, audit design and recording, frontend architecture, registration, login, rate limiting, organizations and account checks, the tenant gate, invitations, member administration, and the frontend routes and UI, departments, department assignments and service requests, and the departments and requests UI

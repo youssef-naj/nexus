@@ -2,7 +2,7 @@
 
 A multi-tenant **Business Operations SaaS** platform. Independent organizations share one application and manage their members, departments, internal service requests, approval workflows and audit history, with **strict tenant isolation**: a user of Organization A can never access Organization B's private data.
 
-> **Status: Phase 5 in progress (departments and service requests: backend done, screens next).** You can register, verify your email, create organizations, invite people, manage members and roles, and (through the API) manage departments, assign members to them, and create, edit and search service requests, with tenant isolation enforced and tested. Submitting and reviewing requests, the dashboard and the screens for departments and requests are **not implemented yet**. See [Status and roadmap](#status-and-roadmap) and [docs/status.md](docs/status.md).
+> **Status: Phase 5 complete (departments and service requests).** You can register, verify your email, create organizations, invite people, manage members and roles, organize members into departments, and create, edit, filter and search service requests, with tenant isolation enforced and tested. Submitting and reviewing requests, the audit viewer and the dashboard are **not implemented yet**. See [Status and roadmap](#status-and-roadmap) and [docs/status.md](docs/status.md).
 
 ## What exists today
 
@@ -10,16 +10,14 @@ A multi-tenant **Business Operations SaaS** platform. Independent organizations 
 - Organizations: create (you become Owner), list, switch between them (the organization is part of the URL), leave.
 - A server-side **tenant gate**: outsiders get a `404` identical to "does not exist". Role-based permissions per membership.
 - Invitations by email (hashed single-use tokens, accepted only by the invited verified account), member list, role changes, removal, with no role escalation, no self-management, and an organization always keeps an Owner.
-- Departments (create, list, update, deactivate), assignment of members to departments, and internal service requests (reference numbers such as `REQ-000042`, drafts, editing by the creator, filtering, search, pagination). These are complete in the API and its tests; the screens are the next step.
-- An append-only audit log written in the same transaction as each change.
+- Departments (create, search, update, deactivate, assign and remove members) and internal service requests (reference numbers such as `REQ-000042`, drafts, editing by the creator, filtering, search, pagination), with screens and API.- An append-only audit log written in the same transaction as each change.
 - React + TypeScript frontend for all of the above, with loading, empty, validation and error states.
 - Integration tests against a real PostgreSQL (Testcontainers), a reusable cross-tenant isolation test battery, frontend component tests, formatting and lint checks, GitHub Actions CI and Dependabot.
 - Architecture decision records (ADRs) for the main design choices.
 
 ## Planned features (MVP)
 
-Screens for departments and requests, submitting and reviewing requests (approve, reject, request changes), the audit history viewer, and an organization dashboard. See [docs/architecture.md](docs/architecture.md) and [docs/status.md](docs/status.md).
-
+Submitting and reviewing requests (approve, reject, request changes), the audit history viewer, and an organization dashboard. See [docs/architecture.md](docs/architecture.md) and [docs/status.md](docs/status.md).
 ## Tech stack
 
 | Area | Choice |
@@ -96,7 +94,9 @@ docker compose up -d
 4. Open **Members** and invite a second email address as Manager. Register and verify that second account in a private window.
 5. In Mailpit, open the invitation email, follow the link while signed in as the invited account and **Accept invitation**.
 6. As Owner, change that member's role or remove them; as the member, notice which controls you no longer see.
-7. Paste the first organization's URL while signed in as an unrelated account: you get the same "not found" screen as for a random id.
+7. Open **Departments**, create one, open it and add yourself and the invited member to it.
+8. Open **Requests**, create a request (choose the department and a due date), then edit it from its detail page. As the invited Employee you see only your own requests; as Manager you see everyone's.
+9. Paste the first organization's URL while signed in as an unrelated account: you get the same "not found" screen as for a random id.
 
 There are no pre-created demo accounts yet; demo data is planned.
 
@@ -187,16 +187,15 @@ nexus/
 | 2 | Identity and authentication | Done |
 | 3 | Organizations and tenant isolation | Done |
 | 4 | Memberships, invitations, roles | Done |
-| 5 | Departments and service requests | In progress (backend done) |
-| 6 | Approval workflow and audit history | Planned |
+| 5 | Departments and service requests | Done |
+| 6 | Approval workflow and audit history | Next |
 | 7 | React dashboard and user experience | Planned |
 | 8 | Security hardening and testing | Planned |
 | 9 | Deployment, documentation, demonstration | Planned |
 
 ## Known limitations
 
-- No screens for departments or requests yet, no way to submit or review a request, no dashboard; no platform administration; organization settings are not editable.
-- No password reset, MFA, or "sign out everywhere". Rate limiting is per application instance and in memory.
+- No way to submit or review a request yet, no audit viewer, no dashboard; no platform administration; organization settings are not editable.- No password reset, MFA, or "sign out everywhere". Rate limiting is per application instance and in memory.
 - No demo accounts, screenshots or deployment guide yet.
 - See [docs/security.md](docs/security.md) for the full, honest list of remaining security work.
 - Not production-ready. Nothing here has been security-reviewed or deployed.

@@ -33,13 +33,16 @@ export function jsonResponse(
   })
 }
 
-/** Stubs fetch with handlers keyed by "METHOD /path" (without the /api prefix). */
+/**
+ * Stubs fetch with handlers keyed by "METHOD /path" (without the /api prefix). A key with a query
+ * string matches exactly; a key without one matches that path with any query string.
+ */
 export function mockApi(routes: Record<string, (init?: RequestInit) => Response>) {
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-    const path = String(input).replace(/^\/api/, "")
-    const key = `${(init?.method ?? "GET").toUpperCase()} ${path}`
-    const handler = routes[key]
-    if (!handler) throw new Error(`Unexpected request: ${key}`)
+    const url = String(input).replace(/^\/api/, "")
+    const method = (init?.method ?? "GET").toUpperCase()
+    const handler = routes[`${method} ${url}`] ?? routes[`${method} ${url.split("?")[0]}`]
+    if (!handler) throw new Error(`Unexpected request: ${method} ${url}`)
     return handler(init)
   })
   vi.stubGlobal("fetch", fetchMock)
