@@ -1,4 +1,10 @@
-import type { RequestCategory, RequestStatus } from "./schemas"
+import {
+  actionSchema,
+  type RequestAction,
+  type RequestCategory,
+  type RequestDetail,
+  type RequestStatus,
+} from "./schemas"
 
 const CATEGORY_LABELS: Record<RequestCategory, string> = {
   IT_SUPPORT: "IT support",
@@ -29,4 +35,42 @@ export function statusVariant(status: RequestStatus): "default" | "secondary" | 
     default:
       return "secondary"
   }
+}
+
+const ACTION_LABELS: Record<RequestAction, string> = {
+  SUBMIT: "Submit for review",
+  APPROVE: "Approve",
+  REJECT: "Reject",
+  REQUEST_CHANGES: "Request changes",
+}
+
+export const ACTION_SUCCESS: Record<RequestAction, string> = {
+  SUBMIT: "Request submitted for review.",
+  APPROVE: "Request approved.",
+  REJECT: "Request rejected.",
+  REQUEST_CHANGES: "Changes requested. The creator can now edit and resubmit.",
+}
+
+export const actionLabel = (action: RequestAction) => ACTION_LABELS[action]
+
+/** Actions that cannot be taken without explaining why. */
+export const COMMENT_REQUIRED: ReadonlySet<RequestAction> = new Set(["REJECT", "REQUEST_CHANGES"])
+
+const ACTION_PAST: Record<string, string> = {
+  SUBMIT: "submitted the request",
+  APPROVE: "approved the request",
+  REJECT: "rejected the request",
+  REQUEST_CHANGES: "requested changes",
+}
+
+export function actionPastTense(action: string): string {
+  return ACTION_PAST[action] ?? action.toLowerCase().replaceAll("_", " ")
+}
+
+/** The actions the server offered, minus any this client does not know. */
+export function knownActions(request: Pick<RequestDetail, "actions">): RequestAction[] {
+  return request.actions.flatMap((action) => {
+    const parsed = actionSchema.safeParse(action)
+    return parsed.success ? [parsed.data] : []
+  })
 }

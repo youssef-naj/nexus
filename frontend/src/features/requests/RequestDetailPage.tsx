@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { Link, useParams } from "react-router"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button, buttonVariants } from "@/components/ui/button"
@@ -6,12 +7,15 @@ import { useOrg } from "@/features/organizations/orgContext"
 import { ApiError } from "@/shared/api/client"
 import { formatDateTime, formatDueDate } from "@/shared/format"
 import { categoryLabel } from "./labels"
+import { RequestActionsPanel } from "./RequestActionsPanel"
+import { RequestHistory } from "./RequestHistory"
 import { RequestStatusBadge } from "./RequestStatusBadge"
 import { useRequest } from "./queries"
 
 export function RequestDetailPage() {
   const { requestId = "" } = useParams()
   const { organization } = useOrg()
+  const [notice, setNotice] = useState<string | null>(null)
   const listPath = `/orgs/${organization.id}/requests`
   const request = useRequest(organization.id, requestId)
 
@@ -58,6 +62,12 @@ export function RequestDetailPage() {
         </div>
       </div>
 
+      {notice && (
+        <Alert role="status">
+          <AlertDescription>{notice}</AlertDescription>
+        </Alert>
+      )}
+
       {data.editable && (
         <div>
           <Link className={buttonVariants({ variant: "outline" })} to="edit">
@@ -79,6 +89,9 @@ export function RequestDetailPage() {
         <h2 className="text-sm font-medium text-muted-foreground">Description</h2>
         <p className="mt-1 whitespace-pre-wrap">{data.description || "No description."}</p>
       </div>
+
+      <RequestActionsPanel request={data} onDone={setNotice} />
+      <RequestHistory orgId={organization.id} requestId={data.id} />
     </section>
   )
 }

@@ -1,6 +1,6 @@
 # MVP status
 
-Checked against the original acceptance criteria. Updated at the end of each phase. Last update: Phase 6, step 1 (approval workflow, backend).
+Checked against the original acceptance criteria. Updated at the end of each phase. Last update: end of Phase 6 (approval workflow with screens, and the audit viewer).
 
 ## Acceptance criteria
 
@@ -8,10 +8,9 @@ Checked against the original acceptance criteria. Updated at the end of each pha
 |---|---|---|
 | A developer can start the application from a clean checkout using documented instructions | Done | README quick start, tested from a fresh clone |
 | The database can be created and migrated reproducibly | Done | Flyway V1 to V6, Testcontainers runs every migration on a fresh PostgreSQL |
-| Users can create, submit, review, approve, reject and track internal service requests | Partly | The full lifecycle works in the API, with history, comments and the self-approval rule; the workflow screens come next |
+| Users can create, submit, review, approve, reject and track internal service requests | Done | Full lifecycle in the API and screens: submit, approve, reject, request changes, history with comments, self-approval rule, concurrency tests |
 | Cross-tenant read and write attempts are tested and rejected | Done for everything built so far | Isolation battery on organizations, members, invitations, departments, assignments and requests; route-inventory test; foreign-id tests; raw-SQL tests of every composite foreign key || Users can create, submit, review, approve, reject and track internal service requests | Not yet | Phases 5 and 6 |
-| Important actions are auditable | Mostly | Recording is built for registration confirmation, organizations, invitations, members, departments and the whole request workflow; the audit viewer is next |
-| The React frontend handles validation, loading and errors | Done for existing screens | Component tests for each state on the auth, organization, member, department and request screens |
+| Important actions are auditable | Done | Events recorded in the business transaction for registration confirmation, organizations, invitations, members, departments and the whole request workflow; Owners and Admins can read them in the Audit screen || The React frontend handles validation, loading and errors | Done for existing screens | Component tests for each state on the auth, organization, member, department and request screens |
 | Backend and frontend checks run in CI | Done | GitHub Actions: build, test, format, lint, audit |
 | API documentation and architecture diagrams are available | Partly | Architecture and ER diagrams done; OpenAPI is generated but its exposure policy is not decided |
 | The project has repeatable demo data and a clear demonstration path | Not yet | Seed data and demo accounts planned |
@@ -35,9 +34,9 @@ Checked against the original acceptance criteria. Updated at the end of each pha
 | A. Identity and authentication | Complete (password reset deferred) |
 | B. Organizations and memberships | Complete: create, list, switch, invite, accept or reject, change and revoke roles, leave. Organization settings and rename are not built |
 | C. Departments | Complete: create, list, search, update, deactivate, assign and remove members (API and screens) |
-| D. Internal service requests | Create, view, edit drafts, filter, search, paginate (API and screens); submit and review in the API, screens next |
-| E. Approval workflow | Backend complete: submit, approve, reject, request changes, history, self-approval rule, concurrency tests; screens next |
-| F. Audit history | Recording complete; the viewer (API and screen) comes next |
+| D. Internal service requests | Complete: create, view, edit drafts, filter, search, paginate, submit and review (API and screens) |
+| E. Approval workflow | Complete: submit, approve, reject, request changes, history, self-approval rule, concurrency tests, screens |
+| F. Audit history | Complete: recording and viewer (Owners and Admins) |
 | G. Dashboard | Phase 7 |
 
 ## Technical debt and open items
@@ -48,7 +47,7 @@ Scheduled so nothing is forgotten:
 2. **OpenAPI:** decide per-environment exposure, document error codes, publish the contract (Phase 8 or 9).
 3. **Platform administration:** metadata-only endpoints, suspend and reactivate organizations, audited (Phase 8).
 4. **Organization settings:** rename and the self-approval policy setting, with audit events.
-5. **Audit viewer:** read endpoint and screen for Owners and Admins (Phase 6).
+5. **Audit viewer extras:** export, filter by actor, and a platform-level viewer (with platform administration).
 6. **Security headers:** `Referrer-Policy` (tokens appear in page URLs), Content-Security-Policy, explicit `SameSite` for the CSRF cookie (Phase 8).
 7. **Architecture tests** (ArchUnit) enforcing the module rules and the "tenant repositories are always scoped" rule (Phase 8).
 8. **Playwright** end-to-end tests for the main workflows (Phase 9).
@@ -64,3 +63,5 @@ Scheduled so nothing is forgotten:
 18. **Organization policy for self-approval**, with an audit event, if ever wanted.
 19. **Withdraw and cancel** for creators (a submitted request currently cannot be taken back).
 20. **Paginate the request history** if requests that bounce many times become realistic.
+21. **Consolidate the day-range helper:** the request and audit services each convert dates to UTC day bounds; move it into one shared, tested helper.
+22. **Dashboard** (Phase 7) will need counts that respect the same visibility rules as the request list; reuse its query building rather than a second implementation.

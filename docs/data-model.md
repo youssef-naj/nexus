@@ -136,7 +136,7 @@ erDiagram
 | `users` | Global accounts. A user is not tied to one organization. | **Implemented (V1)** |
 | `user_tokens` | Single-use email verification and password reset tokens (hash only). | **Implemented (V2)**; password reset not built |
 | `spring_session`, `spring_session_attributes` | Server-side sessions (Spring Session JDBC), created by Flyway. | **Implemented (V3)** |
-| `audit_logs` | Append-only event trail. Triggers reject UPDATE, DELETE and TRUNCATE. No foreign keys. | **Implemented (V4)** |
+| `audit_logs` | `ix_audit_logs_org_time` on `(organization_id, occurred_at DESC)` | Serves the organization audit viewer: one organization's events, newest first, with date and event-type filters | Implemented |
 | `organizations` | Tenants. Holds the per-organization request counter. | **Implemented (V5)** |
 | `memberships` | A user's role in one organization. One row per (organization, user). Never deleted, only `REVOKED`. | **Implemented (V5)** |
 | `invitations` | Pending, accepted, rejected or revoked invitations (token hash only). | **Implemented (V6)** |

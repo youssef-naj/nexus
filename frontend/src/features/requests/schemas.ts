@@ -34,6 +34,8 @@ export const requestDetailSchema = requestSummarySchema.extend({
   assigneeName: z.string().nullish(),
   /** Whether THIS viewer may edit it now (creator, and a draft or sent back). */
   editable: z.boolean(),
+  /** What THIS viewer may do now (a hint; the server checks again). Unknown values are ignored. */
+  actions: z.array(z.string()).default([]),
 })
 export type RequestDetail = z.infer<typeof requestDetailSchema>
 
@@ -70,3 +72,20 @@ export interface RequestPayload {
   dueDate: string | null
   departmentId: string | null
 }
+
+export const ACTIONS = ["SUBMIT", "APPROVE", "REJECT", "REQUEST_CHANGES"] as const
+export const actionSchema = z.enum(ACTIONS)
+export type RequestAction = z.infer<typeof actionSchema>
+
+export const requestEventSchema = z.object({
+  id: z.string(),
+  // A plain string, so a newer server's new action does not break this client
+  action: z.string(),
+  fromStatus: statusSchema,
+  toStatus: statusSchema,
+  comment: z.string().nullish(),
+  actorMembershipId: z.string(),
+  actorName: z.string(),
+  occurredAt: z.string(),
+})
+export type RequestEvent = z.infer<typeof requestEventSchema>

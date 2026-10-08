@@ -2,7 +2,7 @@
 
 A multi-tenant **Business Operations SaaS** platform. Independent organizations share one application and manage their members, departments, internal service requests, approval workflows and audit history, with **strict tenant isolation**: a user of Organization A can never access Organization B's private data.
 
-> > **Status: Phase 6 in progress (approval workflow: backend done, screens and audit viewer next).** You can register, verify your email, create organizations, invite people, manage members and roles, organize members into departments, create service requests, and (through the API) submit and review them with a full history, with tenant isolation enforced and tested. The workflow screens, the audit viewer and the dashboard are **not implemented yet**. See [Status and roadmap](#status-and-roadmap) and [docs/status.md](docs/status.md).
+> **Status: Phase 6 complete (approval workflow and audit history).** You can register, verify your email, create organizations, invite people, manage members and roles, organize members into departments, create and edit service requests, submit and review them (approve, reject, request changes) with a full history, and, as Owner or Admin, read the organization's audit log, with tenant isolation enforced and tested. The dashboard and the remaining polish are **not implemented yet**. See [Status and roadmap](#status-and-roadmap) and [docs/status.md](docs/status.md).
 
 ## What exists today
 
@@ -10,7 +10,8 @@ A multi-tenant **Business Operations SaaS** platform. Independent organizations 
 - Organizations: create (you become Owner), list, switch between them (the organization is part of the URL), leave.
 - A server-side **tenant gate**: outsiders get a `404` identical to "does not exist". Role-based permissions per membership.
 - Invitations by email (hashed single-use tokens, accepted only by the invited verified account), member list, role changes, removal, with no role escalation, no self-management, and an organization always keeps an Owner.
-- An approval workflow in the API: submit, approve, reject and request changes, with required comments, an append-only history per request, a rule that nobody reviews their own request, and protection against two reviewers deciding at once.
+- An approval workflow with screens: submit, approve, reject and request changes (comments required where they matter), a per-request history, a rule that nobody reviews their own request, and protection against two reviewers deciding at once.
+- An audit log screen for Owners and Admins: who did what, newest first, filterable by event type and date, with no personal data or review comments in it.
 - Departments (create, search, update, deactivate, assign and remove members) and internal service requests (reference numbers such as `REQ-000042`, drafts, editing by the creator, filtering, search, pagination), with screens and API.- An append-only audit log written in the same transaction as each change.
 - React + TypeScript frontend for all of the above, with loading, empty, validation and error states.
 - Integration tests against a real PostgreSQL (Testcontainers), a reusable cross-tenant isolation test battery, frontend component tests, formatting and lint checks, GitHub Actions CI and Dependabot.
@@ -18,7 +19,7 @@ A multi-tenant **Business Operations SaaS** platform. Independent organizations 
 
 ## Planned features (MVP)
 
-The workflow screens (submit, review, history), the audit history viewer, and an organization dashboard. See [docs/architecture.md](docs/architecture.md) and [docs/status.md](docs/status.md).
+An organization dashboard (counts by status, awaiting review, my assigned requests, recent activity), then the hardening, deployment and demonstration phases. See [docs/architecture.md](docs/architecture.md) and [docs/status.md](docs/status.md).
 
 ## Tech stack
 
@@ -98,7 +99,9 @@ docker compose up -d
 6. As Owner, change that member's role or remove them; as the member, notice which controls you no longer see.
 7. Open **Departments**, create one, open it and add yourself and the invited member to it.
 8. Open **Requests**, create a request (choose the department and a due date), then edit it from its detail page. As the invited Employee you see only your own requests; as Manager you see everyone's.
-9. Paste the first organization's URL while signed in as an unrelated account: you get the same "not found" screen as for a random id.
+9. As the creator, open a request and **Submit for review**. As the invited Manager, open it: **Approve**, **Reject** or **Request changes** (a comment is required for the last two). The History on the request page shows every step. You cannot review your own request.
+10. As Owner, open **Audit** to see who did what, and filter by event type or date.
+11. Paste the first organization's URL while signed in as an unrelated account: you get the same "not found" screen as for a random id.
 
 There are no pre-created demo accounts yet; demo data is planned.
 
@@ -190,14 +193,14 @@ nexus/
 | 3 | Organizations and tenant isolation | Done |
 | 4 | Memberships, invitations, roles | Done |
 | 5 | Departments and service requests | Done |
-| 6 | Approval workflow and audit history | In progress (workflow backend done) |
-| 7 | React dashboard and user experience | Planned |
+| 6 | Approval workflow and audit history | Done |
+| 7 | React dashboard and user experience | Next |
 | 8 | Security hardening and testing | Planned |
 | 9 | Deployment, documentation, demonstration | Planned |
 
 ## Known limitations
 
-- No screens yet for submitting or reviewing requests, no audit viewer, no dashboard; requests cannot be assigned or withdrawn; no platform administration; organization settings are not editable.
+- No dashboard yet; requests cannot be assigned, withdrawn or cancelled; no platform administration; organization settings are not editable; no password reset.
 - No demo accounts, screenshots or deployment guide yet.
 - See [docs/security.md](docs/security.md) for the full, honest list of remaining security work.
 - Not production-ready. Nothing here has been security-reviewed or deployed.

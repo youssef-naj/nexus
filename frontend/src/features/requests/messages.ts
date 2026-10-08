@@ -10,9 +10,13 @@ export function requestErrorMessage(error: unknown): string {
       case "REQUEST_NOT_EDITABLE":
         return "This request can no longer be edited."
       case "NOT_REQUEST_OWNER":
-        return "Only the person who created a request can edit it."
+        return "Only the person who created a request can edit or submit it."
       case "DEPARTMENT_INACTIVE":
         return "That department is inactive. Choose another."
+      case "INVALID_TRANSITION":
+        return "That action is no longer possible: the request was already handled. It was reloaded."
+      case "SELF_REVIEW_NOT_ALLOWED":
+        return "You can't review a request you created."
     }
     if (error.status === 404) return "That request or department no longer exists."
   }

@@ -16,6 +16,7 @@ import { DepartmentsPage } from "@/features/departments/DepartmentsPage"
 import { RequestDetailPage } from "@/features/requests/RequestDetailPage"
 import { RequestFormPage } from "@/features/requests/RequestFormPage"
 import { RequestsPage } from "@/features/requests/RequestsPage"
+import { AuditPage } from "@/features/audit/AuditPage"
 
 export const router = createBrowserRouter([
   { path: "/login", element: <LoginPage /> },
@@ -42,6 +43,7 @@ export const router = createBrowserRouter([
               { path: "requests/new", element: <RequestFormPage /> },
               { path: "requests/:requestId", element: <RequestDetailPage /> },
               { path: "requests/:requestId/edit", element: <RequestFormPage /> },
+              { path: "audit", element: <AuditPage /> },
             ],
           },
         ],
