@@ -27,10 +27,10 @@ flowchart LR
       AUD["audit [built]"]
       DEP["department [built]"]
       REQ["request + approval workflow [built]"]
-      DASH["dashboard [planned]"]
+      DASH["dashboard [built]"]
     end
   end
-  DB[("PostgreSQL 17<br/>Flyway migrations V1-V10 [built]")]
+  DB[("PostgreSQL 17<br/>Flyway migrations V1-V11 [built]")]
   MAIL["Mailpit, dev email [built]"]
 
   B --> P --> SEC --> GATE --> API --> Modules
@@ -57,6 +57,8 @@ flowchart TD
   request --> membership
   request --> department
   request --> audit
+  dashboard --> organization
+  dashboard --> request
   team --> organization
   team --> membership
   team --> identity
@@ -64,9 +66,9 @@ flowchart TD
   team --> department
 ```
 
-Rules: arrows point at what a module may use; nothing depends on `team` or `request`. `shared` depends on no feature. Modules reach each other only through public application services (`MembershipService`, `OrganizationService`, `RequestNumberAllocator`, `DepartmentDirectory`, `UserDirectory`, `AuditService`). Documented exceptions: the organization member list, the department member list, the request list, detail and history, and the audit viewer are read-only joins over other modules' tables, because sorting and displaying names needs them (ADR-0022, ADR-0025, ADR-0026, ADR-0029).
+Rules: arrows point at what a module may use; nothing depends on `team` or `dashboard`, and only `dashboard` depends on `request` (through its `RequestStatistics` service).
 
-Rules: arrows point at what a module may use; nothing depends on `team`. `shared` depends on no feature. Modules reach each other only through public application services (`MembershipService`, `OrganizationService`, `UserDirectory`, `AuditService`). One documented exception: the member list is a read-only join over memberships and users (ADR-0022). Writes always go through the owning module. Architecture tests that enforce these rules are planned for Phase 8.
+Rules: arrows point at what a module may use; nothing depends on `team`. `shared` depends on no feature. Modules reach each other only through public application services (`RequestNumberAllocator`, `RequestStatistics`, `DepartmentDirectory`, `UserDirectory`, `AuditService`). One documented exception: the member list is a read-only join over memberships and users (ADR-0022). Writes always go through the owning module. Architecture tests that enforce these rules are planned for Phase 8.
 
 ## Backend
 
@@ -91,7 +93,7 @@ Rules: arrows point at what a module may use; nothing depends on `team`. `shared
 ## Frontend
 
 - React, TypeScript (strict, plus `noUncheckedIndexedAccess`), Vite, Tailwind CSS and shadcn/ui (Base UI primitives).
-- **Feature-oriented structure:** `src/app`, `src/features/<name>` (auth, organizations, members, departments, requests, audit, system), `src/shared`, `src/components/ui`.
+- **Feature-oriented structure:** `src/app`, `src/features/<name>` (auth, organizations, members, departments, requests, audit, dashboard), `src/shared`, `src/components/ui`.
 - **Server state** with TanStack Query (everything for one organization is cached under `["organizations", orgId, ...]`, so logout clears it), **forms** with React Hook Form and Zod, **routing** with React Router. The organization is part of the route (`/orgs/:orgId/...`).
 - Shared UI and API helpers: a query-string builder, the page-envelope schema, common error wording, a pagination bar, text and textarea fields with accessible error messages, and a form-error mapper that places server field errors under their fields. Lists keep their filter state in component state; everything cached for an organization sits under one key prefix, so logout clears it.
 - Permission-based controls are usability hints only. Authorization is enforced on the server.
@@ -108,4 +110,4 @@ Rules: arrows point at what a module may use; nothing depends on `team`. `shared
 
 ## Decisions
 
-See [docs/decisions](decisions/README.md) for the ADRs (0001 to 0029): modular monolith, stack, session authentication, tenant isolation, disclosure policy, platform admin separation, authorization, errors and time, identifiers, workflow and concurrency, tokens, audit design and recording, frontend architecture, registration, login, rate limiting, organizations and account checks, the tenant gate, invitations, member administration, and the frontend routes and UI, departments, department assignments and service requests, and the departments and requests UI, and the workflow screens and audit viewer
+See [docs/decisions](decisions/README.md) for the ADRs (0001 to 0030): modular monolith, stack, session authentication, tenant isolation, disclosure policy, platform admin separation, authorization, errors and time, identifiers, workflow and concurrency, tokens, audit design and recording, frontend architecture, registration, login, rate limiting, organizations and account checks, the tenant gate, invitations, member administration, and the frontend routes and UI, departments, department assignments and service requests, and the departments and requests UI, and the workflow screens and audit viewer, and the dashboard

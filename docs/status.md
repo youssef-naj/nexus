@@ -1,6 +1,6 @@
 # MVP status
 
-Checked against the original acceptance criteria. Updated at the end of each phase. Last update: end of Phase 6 (approval workflow with screens, and the audit viewer).
+Checked against the original acceptance criteria. Updated at the end of each phase. Last update: end of Phase 7, step 1 (dashboard).
 
 ## Acceptance criteria
 
@@ -37,7 +37,7 @@ Checked against the original acceptance criteria. Updated at the end of each pha
 | D. Internal service requests | Complete: create, view, edit drafts, filter, search, paginate, submit and review (API and screens) |
 | E. Approval workflow | Complete: submit, approve, reject, request changes, history, self-approval rule, concurrency tests, screens |
 | F. Audit history | Complete: recording and viewer (Owners and Admins) |
-| G. Dashboard | Phase 7 |
+| G. Dashboard | Done except "assigned to me": total, requests by status, awaiting review, my requests and recent activity (API and screen), consistent with the request list. Assignment of requests is not built |
 
 ## Technical debt and open items
 
@@ -59,9 +59,11 @@ Scheduled so nothing is forgotten:
 14. **LIKE escaping is duplicated** in the department and request search classes; consolidate into one tested helper.
 15. **Searchable member picker** for department assignment: it loads the first 100 active members today.
 16. **Consolidate duplicated frontend helpers:** the members page still has its own pagination controls and control-character check; move it onto `PaginationBar` and `shared/forms/text.ts`, and the organization name schema onto the same text helper.
-17. **Assigning requests** and the "assigned to me" queue and index (the dashboard needs it).
+17. **Assigning requests** (and an "assigned to me" widget and index on `assignee_membership_id`): the column and its composite foreign key exist, but no API sets it. The dashboard shows "awaiting your review" in the meantime.
 18. **Organization policy for self-approval**, with an audit event, if ever wanted.
 19. **Withdraw and cancel** for creators (a submitted request currently cannot be taken back).
 20. **Paginate the request history** if requests that bounce many times become realistic.
 21. **Consolidate the day-range helper:** the request and audit services each convert dates to UTC day bounds; move it into one shared, tested helper.
 22. **Dashboard** (Phase 7) will need counts that respect the same visibility rules as the request list; reuse its query building rather than a second implementation.
+23. **URL-persisted filters:** the request list reads `status`, `mine` and `reviewable` from the URL only as starting values; changing a filter does not update the URL.
+24. **Recent-activity scaling:** the employee-scoped query filters by creator after scanning the time-ordered index; revisit with measurements.

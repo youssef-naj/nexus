@@ -9,7 +9,8 @@ This document describes what the code does today, not what we hope it does. Deci
 |---|---|---|
 | Cross-tenant data access (IDOR) | Organization in the URL path, membership gate before any controller, organization-scoped queries, composite foreign keys, a shared isolation test battery and a route-inventory test (ADR-0004, ADR-0019) | [built] for organizations, members, invitations, departments, department assignments and service requests; every new endpoint must reuse the harness |
 | Role escalation | One role-grant policy used by invitations and member changes; nobody changes their own role; an organization always keeps an Owner (ADR-0007, ADR-0022) | [built] |
-| Unauthorized or self-approval of requests | Review needs REQUEST_REVIEW and is refused for the request's own creator; decisions carry the version the reviewer saw; transitions are validated against one table and serialized by locks (ADR-0028) | [built] |                                                                                                                                                     |         |
+| Unauthorized or self-approval of requests | Review needs REQUEST_REVIEW and is refused for the request's own creator; decisions carry the version the reviewer saw; transitions are validated against one table and serialized by locks (ADR-0028) | [built] |
+| Dashboard figures revealing requests a member cannot see | Figures are computed with the same visibility rule as the request list (employees only their own requests); a test compares every number with the matching list; the "awaiting review" figure and its list filter are restricted to reviewers | [built] |
 | Lost updates and races between administrators | Per-organization row lock, caller re-check under the lock, per-member version (409), optimistic locking backstop (ADR-0022) | [built] |
 | Password guessing and credential stuffing | bcrypt, per-IP and per-account rate limits, generic errors (ADR-0015, ADR-0016) | [built] |
 | Account and organization enumeration | Identical responses for registration, login, invitation and organization lookups; equalized timing (ADR-0005, ADR-0014, ADR-0015) | [built] |
@@ -134,6 +135,14 @@ Rules beyond the matrix (ADR-0007, ADR-0022):
 - **Comments:** rejecting or requesting changes requires one. Plain text, at most 1000 characters, no control characters except line breaks and tabs. Comments live only in the request history, visible to whoever can see the request, and are never copied into the audit log.
 - **History:** every transition is a row in `request_events` (actor, action, from and to status, comment, time), append-only at the database level and tied to the request and the actor inside one organization by composite foreign keys.
 - **Frontend:** the request page shows submit or review controls only for the actions the server returned for the current viewer, sends the version it loaded with every action, requires a comment in the browser for reject and request-changes (the server checks again), and renders comments and history as plain text. These are usability hints; the server enforces everything.
+
+## Dashboard [built]
+
+- **Scope follows the request list:** employees see counts and recent activity only for requests they created; Owners, Admins and Managers (REQUEST_VIEW_ALL) see the whole organization plus their own. The figures come from one consistent snapshot of the database.
+- **Awaiting review** counts submitted requests created by someone else and is only returned to members who can review (REQUEST_REVIEW); the matching `reviewable` list filter returns an empty page to everyone else.
+- **Recent activity** shows who did what to which request (actor name, action, reference, title). It carries no review comments and no email addresses.
+- **Isolation:** the dashboard endpoint passes the shared cross-tenant battery, and a test checks that another organization's requests never change the numbers.
+- **Frontend:** counts link to the request list through URL parameters that only set starting filters; the server still decides what the list contains.
 
 ## Audit log [built, partial]
 

@@ -1,6 +1,6 @@
 # Data model
 
-Implemented through Flyway migrations **V1 to V10**: `users`, `user_tokens`, `spring_session`, `audit_logs`, `organizations`, `memberships`, `invitations`, `departments`, `department_memberships`, `service_requests` and `request_events`.
+Implemented through Flyway migrations **V1 to V11**: `users`, `user_tokens`, `spring_session`, `audit_logs`, `organizations`, `memberships`, `invitations`, `departments`, `department_memberships`, `service_requests` and `request_events`.
 
 ## Entity relationship diagram (target model)
 
@@ -143,7 +143,7 @@ erDiagram
 | `departments` | Organization-scoped groupings, deactivated rather than deleted. | **Implemented (V7)** |
 | `department_memberships` | Assigns members to departments. Composite foreign keys keep both sides in the row's organization. | **Implemented (V8)** |
 | `service_requests` | The business object that moves through the approval workflow. Drafts only until the workflow phase. | **Implemented (V9)** |
-| `request_events` | Append-only history of each request transition (actor, action, from and to status, comment). Composite foreign keys to the request and the actor; triggers reject UPDATE, DELETE and TRUNCATE. | **Implemented (V10)** |
+| `request_events` | `ix_request_events_org_time` on `(organization_id, occurred_at DESC)` | The dashboard's recent activity: one organization's request events, newest first | Implemented (V11) |
 
 ## Key design decisions
 

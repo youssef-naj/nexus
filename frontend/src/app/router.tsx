@@ -6,7 +6,7 @@ import { RequireAuth } from "@/features/auth/RequireAuth"
 import { VerifyEmailPage } from "@/features/auth/VerifyEmailPage"
 import { NotFoundPage } from "@/features/home/NotFoundPage"
 import { CreateOrganizationPage } from "@/features/organizations/CreateOrganizationPage"
-import { OrgDashboardPage } from "@/features/organizations/OrgDashboardPage"
+import { DashboardPage } from "@/features/dashboard/DashboardPage"
 import { OrgLayout } from "@/features/organizations/OrgLayout"
 import { OrganizationsPage } from "@/features/organizations/OrganizationsPage"
 import { AcceptInvitationPage } from "@/features/members/AcceptInvitationPage"
@@ -35,7 +35,7 @@ export const router = createBrowserRouter([
             path: "/orgs/:orgId",
             element: <OrgLayout />,
             children: [
-              { index: true, element: <OrgDashboardPage /> },
+              { index: true, element: <DashboardPage /> },
               { path: "members", element: <MembersPage /> },
               { path: "departments", element: <DepartmentsPage /> },
               { path: "departments/:departmentId", element: <DepartmentDetailPage /> },

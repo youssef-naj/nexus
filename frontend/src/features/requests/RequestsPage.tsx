@@ -1,7 +1,8 @@
 import { useState } from "react"
-import { Link } from "react-router"
+import { Link, useSearchParams } from "react-router"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { Button } from "@/components/ui/button"
+import { buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -18,7 +19,7 @@ import { useOrg } from "@/features/organizations/orgContext"
 import { NativeSelect } from "@/shared/components/NativeSelect"
 import { PaginationBar } from "@/shared/components/PaginationBar"
 import { formatDate, formatDueDate } from "@/shared/format"
-import { categoryLabel } from "./labels"
+import { categoryLabel, statusLabel } from "./labels"
 import { RequestStatusBadge } from "./RequestStatusBadge"
 import { useRequests } from "./queries"
 import {
@@ -29,7 +30,6 @@ import {
   type RequestCategory,
   type RequestStatus,
 } from "./schemas"
-import { statusLabel } from "./labels"
 
 const SORTS = {
   newest: { sort: "CREATED", direction: "DESC", label: "Newest first" },
@@ -48,11 +48,19 @@ export function RequestsPage() {
   const { organization, can } = useOrg()
   const orgId = organization.id
   const canViewAll = can("REQUEST_VIEW_ALL")
+  const canReview = can("REQUEST_REVIEW")
+  // The dashboard links here with starting filters, for example ?status=SUBMITTED
+  const [searchParams] = useSearchParams()
   const [page, setPage] = useState(0)
-  const [status, setStatus] = useState<RequestStatus | "">("")
+  const [status, setStatus] = useState<RequestStatus | "">(
+    () => statusSchema.safeParse(searchParams.get("status")).data ?? "",
+  )
   const [category, setCategory] = useState<RequestCategory | "">("")
   const [departmentId, setDepartmentId] = useState("")
-  const [mine, setMine] = useState(false)
+  const [mine, setMine] = useState(() => searchParams.get("mine") === "true")
+  const [reviewable, setReviewable] = useState(
+    () => searchParams.get("reviewable") === "true" && canReview,
+  )
   const [sortKey, setSortKey] = useState<SortKey>("newest")
   const [searchInput, setSearchInput] = useState("")
   const [query, setQuery] = useState("")
@@ -64,11 +72,12 @@ export function RequestsPage() {
     category,
     departmentId,
     mine: mine || undefined,
+    reviewable: reviewable || undefined,
     q: query,
     sort: SORTS[sortKey].sort,
     direction: SORTS[sortKey].direction,
   })
-  const filtering = Boolean(status || category || departmentId || mine || query)
+  const filtering = Boolean(status || category || departmentId || mine || reviewable || query)
 
   function changed<T>(setter: (value: T) => void) {
     return (value: T) => {
@@ -98,6 +107,7 @@ export function RequestsPage() {
           <NativeSelect
             id="filter-status"
             value={status}
+            disabled={reviewable}
             onChange={(event) =>
               changed(setStatus)(statusSchema.safeParse(event.target.value).data ?? "")
             }
@@ -165,6 +175,19 @@ export function RequestsPage() {
               onChange={(event) => changed(setMine)(event.target.checked)}
             />
             Only my requests
+          </label>
+        )}
+        {canReview && (
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={reviewable}
+              onChange={(event) => {
+                if (event.target.checked) setStatus("")
+                changed(setReviewable)(event.target.checked)
+              }}
+            />
+            Awaiting my review
           </label>
         )}
         <form

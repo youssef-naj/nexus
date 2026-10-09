@@ -57,7 +57,8 @@ public class ServiceRequestService {
             boolean mine,
             LocalDate createdFrom,
             LocalDate createdTo,
-            String query) {}
+            String query,
+            boolean reviewable) {}
 
     public record RequestPage(List<RequestSummary> items, long total) {}
 
@@ -149,6 +150,17 @@ public class ServiceRequestService {
             }
             creator = org.membershipId();
         }
+        RequestStatus status = criteria.status();
+        UUID excludeCreator = null;
+        if (criteria.reviewable()) {
+            // "Awaiting my review": submitted requests created by someone else, for reviewers only
+            if (!policy.can(org.role(), Permission.REQUEST_REVIEW)
+                    || (status != null && status != RequestStatus.SUBMITTED)) {
+                return new RequestPage(List.of(), 0);
+            }
+            status = RequestStatus.SUBMITTED;
+            excludeCreator = org.membershipId();
+        }
         String query = criteria.query() == null ? null : criteria.query().trim();
         if (query != null && query.isEmpty()) {
             query = null;
@@ -158,7 +170,7 @@ public class ServiceRequestService {
         }
         RequestQueries.Filter filter =
                 new RequestQueries.Filter(
-                        criteria.status(),
+                        status,
                         criteria.category(),
                         criteria.departmentId(),
                         creator,
@@ -168,7 +180,8 @@ public class ServiceRequestService {
                                 : startOfDay(criteria.createdFrom(), 0, "createdFrom"),
                         criteria.createdTo() == null
                                 ? null
-                                : startOfDay(criteria.createdTo(), 1, "createdTo"));
+                                : startOfDay(criteria.createdTo(), 1, "createdTo"),
+                        excludeCreator);
         RequestQueries.SummaryPage result =
                 queries.search(org.organizationId(), filter, sort, ascending, page, size);
         return new RequestPage(result.items(), result.total());

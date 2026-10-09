@@ -51,6 +51,7 @@ class RequestController {
             @RequestParam(required = false) UUID departmentId,
             @RequestParam(required = false) UUID createdBy,
             @RequestParam(defaultValue = "false") boolean mine,
+            @RequestParam(defaultValue = "false") boolean reviewable,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
                     LocalDate createdFrom,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
@@ -73,7 +74,8 @@ class RequestController {
                                 mine,
                                 createdFrom,
                                 createdTo,
-                                query),
+                                query,
+                                reviewable),
                         sort,
                         direction.isAscending(),
                         safePage,
