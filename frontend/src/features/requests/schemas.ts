@@ -36,6 +36,8 @@ export const requestDetailSchema = requestSummarySchema.extend({
   editable: z.boolean(),
   /** What THIS viewer may do now (a hint; the server checks again). Unknown values are ignored. */
   actions: z.array(z.string()).default([]),
+  /** Whether this viewer may assign it now (a reviewer, and the request is submitted). */
+  assignable: z.boolean().default(false),
 })
 export type RequestDetail = z.infer<typeof requestDetailSchema>
 
@@ -86,6 +88,16 @@ export const requestEventSchema = z.object({
   comment: z.string().nullish(),
   actorMembershipId: z.string(),
   actorName: z.string(),
+  /** The member an ASSIGN or UNASSIGN event concerns. */
+  targetName: z.string().nullish(),
   occurredAt: z.string(),
 })
 export type RequestEvent = z.infer<typeof requestEventSchema>
+export const reviewerSchema = z.object({
+  membershipId: z.string(),
+  displayName: z.string(),
+  role: z.string(),
+  /** The caller's own entry, so the UI can offer "assign to me". */
+  you: z.boolean(),
+})
+export type Reviewer = z.infer<typeof reviewerSchema>

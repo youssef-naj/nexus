@@ -32,6 +32,7 @@ Short records of the significant decisions made for Nexus. Each ADR states the c
 | [0028](0028-approval-workflow.md) | Approval workflow | Accepted |
 | [0029](0029-workflow-screens-and-audit-viewer.md) | Workflow screens and the audit viewer | Accepted |
 | [0030](0030-dashboard.md) | Dashboard | Accepted |
+| [0031](0031-request-assignment-and-accessibility.md) | Request assignment and the accessibility pass | Accepted |
 
 
 Use [0000-template.md](0000-template.md) for new records.

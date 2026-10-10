@@ -133,10 +133,11 @@ public class RequestWorkflowService {
                 actor.organizationId(),
                 requestId,
                 actor.membershipId(),
-                action,
+                action.name(),
                 from,
                 request.getStatus(),
                 comment,
+                null,
                 now);
         audit.record(
                 AuditEvent.of(

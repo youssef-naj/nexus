@@ -11,6 +11,7 @@ import { RequestActionsPanel } from "./RequestActionsPanel"
 import { RequestHistory } from "./RequestHistory"
 import { RequestStatusBadge } from "./RequestStatusBadge"
 import { useRequest } from "./queries"
+import { AssignmentPanel } from "./AssignmentPanel"
 
 export function RequestDetailPage() {
   const { requestId = "" } = useParams()
@@ -91,6 +92,7 @@ export function RequestDetailPage() {
       </div>
 
       <RequestActionsPanel request={data} onDone={setNotice} />
+      <AssignmentPanel request={data} onDone={setNotice} />
       <RequestHistory orgId={organization.id} requestId={data.id} />
     </section>
   )

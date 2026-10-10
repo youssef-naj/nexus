@@ -22,7 +22,7 @@ export function RequestHistory({ orgId, requestId }: { orgId: string; requestId:
         <ol className="grid gap-4 border-l pl-4">
           {events.data.map((event) => (
             <li key={event.id}>
-              <p className="font-medium">{`${event.actorName} ${actionPastTense(event.action)}`}</p>
+              <p className="font-medium">{`${event.actorName} ${actionPastTense(event.action, event.targetName)}`}</p>
               <p className="text-xs text-muted-foreground">
                 <time dateTime={event.occurredAt}>{formatDateTime(event.occurredAt)}</time>
                 {` · ${statusLabel(event.fromStatus)} → ${statusLabel(event.toStatus)}`}

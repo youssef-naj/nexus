@@ -23,6 +23,7 @@ import { memberErrorMessage } from "./messages"
 import { useChangeRole, useLeaveOrganization, useMembers, useRemoveMember } from "./queries"
 import { canManageMember, grantableRoles } from "./roles"
 import type { Member } from "./schemas"
+import { ScrollRegion } from "@/shared/components/ScrollRegion"
 
 export function MembersPage() {
   const { organization, can } = useOrg()
@@ -109,42 +110,44 @@ export function MembersPage() {
 
       {members.data && (
         <>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                {showEmails && <TableHead>Email</TableHead>}
-                <TableHead>Role</TableHead>
-                <TableHead>Joined</TableHead>
-                <TableHead>
-                  <span className="sr-only">Actions</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {members.data.content.map((member) => (
-                <MemberRow
-                  key={member.id}
-                  member={member}
-                  actorRole={organization.role}
-                  showEmail={showEmails}
-                  canAssign={canAssign}
-                  canRemove={canRemove}
-                  busy={busy}
-                  onChangeRole={(role) =>
-                    void attempt(() =>
-                      changeRole.mutateAsync({
-                        membershipId: member.id,
-                        role,
-                        version: member.version,
-                      }),
-                    )
-                  }
-                  onRemove={() => void attempt(() => removeMember.mutateAsync(member.id))}
-                />
-              ))}
-            </TableBody>
-          </Table>
+          <ScrollRegion label="Audit events">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  {showEmails && <TableHead>Email</TableHead>}
+                  <TableHead>Role</TableHead>
+                  <TableHead>Joined</TableHead>
+                  <TableHead>
+                    <span className="sr-only">Actions</span>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {members.data.content.map((member) => (
+                  <MemberRow
+                    key={member.id}
+                    member={member}
+                    actorRole={organization.role}
+                    showEmail={showEmails}
+                    canAssign={canAssign}
+                    canRemove={canRemove}
+                    busy={busy}
+                    onChangeRole={(role) =>
+                      void attempt(() =>
+                        changeRole.mutateAsync({
+                          membershipId: member.id,
+                          role,
+                          version: member.version,
+                        }),
+                      )
+                    }
+                    onRemove={() => void attempt(() => removeMember.mutateAsync(member.id))}
+                  />
+                ))}
+              </TableBody>
+            </Table>
+          </ScrollRegion>
 
           <nav aria-label="Pagination" className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">

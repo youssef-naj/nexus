@@ -2,6 +2,7 @@ package com.l2c.nexus.request.api;
 
 import com.l2c.nexus.organization.application.OrgContext;
 import com.l2c.nexus.organization.web.CurrentOrg;
+import com.l2c.nexus.request.application.RequestAssignmentService;
 import com.l2c.nexus.request.application.RequestWorkflowService;
 import com.l2c.nexus.request.application.ServiceRequestService;
 import com.l2c.nexus.request.application.ServiceRequestService.ListCriteria;
@@ -19,6 +20,7 @@ import java.util.UUID;
 import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -36,10 +38,15 @@ class RequestController {
 
     private final ServiceRequestService service;
     private final RequestWorkflowService workflow;
+    private final RequestAssignmentService assignments;
 
-    RequestController(ServiceRequestService service, RequestWorkflowService workflow) {
+    RequestController(
+            ServiceRequestService service,
+            RequestWorkflowService workflow,
+            RequestAssignmentService assignments) {
         this.service = service;
         this.workflow = workflow;
+        this.assignments = assignments;
     }
 
     /** sort is CREATED (default), UPDATED or DUE_DATE; direction is DESC (default) or ASC. */
@@ -52,6 +59,7 @@ class RequestController {
             @RequestParam(required = false) UUID createdBy,
             @RequestParam(defaultValue = "false") boolean mine,
             @RequestParam(defaultValue = "false") boolean reviewable,
+            @RequestParam(defaultValue = "false") boolean assignedToMe,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
                     LocalDate createdFrom,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
@@ -75,7 +83,8 @@ class RequestController {
                                 createdFrom,
                                 createdTo,
                                 query,
-                                reviewable),
+                                reviewable,
+                                assignedToMe),
                         sort,
                         direction.isAscending(),
                         safePage,
@@ -126,6 +135,22 @@ class RequestController {
                         org, requestId, payload.action(), payload.version(), payload.comment()));
     }
 
+    /** Assigns a submitted request to a reviewer. Assignment is advisory (ADR-0031). */
+    @PutMapping("/{requestId}/assignee")
+    RequestDetailResponse assign(
+            @CurrentOrg OrgContext org,
+            @PathVariable UUID requestId,
+            @Valid @RequestBody AssigneePayload payload) {
+        return respond(
+                org, assignments.assign(org, requestId, payload.membershipId(), payload.version()));
+    }
+
+    @DeleteMapping("/{requestId}/assignee")
+    RequestDetailResponse unassign(
+            @CurrentOrg OrgContext org, @PathVariable UUID requestId, @RequestParam long version) {
+        return respond(org, assignments.unassign(org, requestId, version));
+    }
+
     @GetMapping("/{requestId}/events")
     List<RequestEventResponse> events(@CurrentOrg OrgContext org, @PathVariable UUID requestId) {
         return workflow.history(org, requestId).stream().map(RequestEventResponse::from).toList();
@@ -133,7 +158,10 @@ class RequestController {
 
     private RequestDetailResponse respond(OrgContext org, RequestDetail detail) {
         return RequestDetailResponse.from(
-                detail, org.membershipId(), workflow.availableActions(org, detail));
+                detail,
+                org.membershipId(),
+                workflow.availableActions(org, detail),
+                assignments.canAssign(org, detail));
     }
 
     private static RequestInput input(RequestPayload payload) {

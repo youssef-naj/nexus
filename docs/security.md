@@ -11,6 +11,7 @@ This document describes what the code does today, not what we hope it does. Deci
 | Role escalation | One role-grant policy used by invitations and member changes; nobody changes their own role; an organization always keeps an Owner (ADR-0007, ADR-0022) | [built] |
 | Unauthorized or self-approval of requests | Review needs REQUEST_REVIEW and is refused for the request's own creator; decisions carry the version the reviewer saw; transitions are validated against one table and serialized by locks (ADR-0028) | [built] |
 | Dashboard figures revealing requests a member cannot see | Figures are computed with the same visibility rule as the request list (employees only their own requests); a test compares every number with the matching list; the "awaiting review" figure and its list filter are restricted to reviewers | [built] |
+| Assignment used to probe members or organizations, or to dodge review | The assignee must be an active reviewer of the same organization and not the creator, and every invalid target returns the same generic `400`; assignment is advisory, so it cannot lock a request or exclude other reviewers; assignees who lose reviewer rights lose open assignments (ADR-0031) | [built] |
 | Lost updates and races between administrators | Per-organization row lock, caller re-check under the lock, per-member version (409), optimistic locking backstop (ADR-0022) | [built] |
 | Password guessing and credential stuffing | bcrypt, per-IP and per-account rate limits, generic errors (ADR-0015, ADR-0016) | [built] |
 | Account and organization enumeration | Identical responses for registration, login, invitation and organization lookups; equalized timing (ADR-0005, ADR-0014, ADR-0015) | [built] |
@@ -124,7 +125,7 @@ Rules beyond the matrix (ADR-0007, ADR-0022):
 - **Request creation:** the reference number is allocated under the organization lock, the creator's membership is re-read after taking it (a just-removed member cannot create), and the department is locked in share mode while it is attached. Creating is rate limited per member.
 - **Input handling:** titles and names reject control characters; descriptions allow newlines and tabs only; due dates must be today or later and within ten years (unless unchanged). Search text is bound as a parameter and its `%`, `_` and `\` characters match themselves. Sort columns come from a whitelist.
 - **Frontend:** screens show or hide controls from the member's permissions and from the server's `editable` flag on each request; these are usability hints and every action is authorized again on the server. All user-supplied text (department names, request titles and descriptions) is rendered as React text, never as HTML, which is covered by a test that renders markup-looking input. Pages for foreign or invisible departments and requests show one neutral "not found" screen, matching the server's `404`.
-- - **Not built yet:** assigning requests; deleting or cancelling drafts; withdrawing a submitted request.
+- **Not built yet:** deleting or cancelling drafts; withdrawing a submitted request.
 
 ## Approval workflow [built]
 
@@ -136,10 +137,20 @@ Rules beyond the matrix (ADR-0007, ADR-0022):
 - **History:** every transition is a row in `request_events` (actor, action, from and to status, comment, time), append-only at the database level and tied to the request and the actor inside one organization by composite foreign keys.
 - **Frontend:** the request page shows submit or review controls only for the actions the server returned for the current viewer, sends the version it loaded with every action, requires a comment in the browser for reject and request-changes (the server checks again), and renders comments and history as plain text. These are usability hints; the server enforces everything.
 
+## Request assignment [built]
+
+- **Who and what:** a reviewer (Owner, Admin, Manager) can assign a **submitted** request to an active member who can review, including themselves, and can remove the assignee. The creator cannot be the assignee. Employees cannot assign (403 for the creator, 404 for anyone who cannot see the request).
+- **Generic errors:** an unknown id, a member of another organization, a removed member, a non-reviewer and the creator all return the same `400` for `membershipId`. Other failures: `409 REQUEST_NOT_ASSIGNABLE` (not submitted), `409 STALE_VERSION`, `404` for requests outside the organization.
+- **Advisory:** assignment never restricts who may decide, so a request cannot be stuck behind an absent assignee. It does change the request's version, so a reviewer who opened the request earlier must reload before deciding.
+- **Races:** assignment takes a shared lock on the organization and a lock on the request, in the same fixed order as the other operations. Two reviewers assigning at once produce exactly one winner, and an assignee being removed at the same moment never stays assigned.
+- **Cleanup:** removing a member, a member leaving, or demoting a member below reviewer clears their open assignments in the same transaction. Decided requests keep the assignee as a record.
+- **History and audit:** each assignment and removal is a history event (visible to anyone who can see the request) and an audit event with the request reference and the assignee's membership id, never names or emails. The database requires assignment events to name a member of the same organization.
+- **Queues:** "assigned to me" is a reviewer-only list filter and dashboard figure; for everyone else it is empty or null.
+
 ## Dashboard [built]
 
 - **Scope follows the request list:** employees see counts and recent activity only for requests they created; Owners, Admins and Managers (REQUEST_VIEW_ALL) see the whole organization plus their own. The figures come from one consistent snapshot of the database.
-- **Awaiting review** counts submitted requests created by someone else and is only returned to members who can review (REQUEST_REVIEW); the matching `reviewable` list filter returns an empty page to everyone else.
+- **Awaiting review** counts submitted requests created by someone else, and **assigned to you** counts submitted requests assigned to the caller. Both are only returned to members who can review (REQUEST_REVIEW); the matching `reviewable` and `assignedToMe` list filters return an empty page to everyone else.
 - **Recent activity** shows who did what to which request (actor name, action, reference, title). It carries no review comments and no email addresses.
 - **Isolation:** the dashboard endpoint passes the shared cross-tenant battery, and a test checks that another organization's requests never change the numbers.
 - **Frontend:** counts link to the request list through URL parameters that only set starting filters; the server still decides what the list contains.
@@ -148,8 +159,7 @@ Rules beyond the matrix (ADR-0007, ADR-0022):
 
 - Events recorded in the **same transaction** as the change (the service refuses to run outside one), so a change and its record commit or roll back together.
 - Each event type has an **allow-list** of metadata keys; unknown keys, null values and long values are rejected. Emails, tokens and passwords cannot reach the log.
-- - Events today: user email verified; organization created; invitation created, revoked, accepted and rejected; member role changed, removed and left; department created, updated (old and new name), deactivated and reactivated; member added to and removed from a department (membership id only); request submitted, approved, rejected and changes requested (reference number only). Drafts are private working state and are not audited; review comments are never audited (they are in the request history).
-- The table is append-only (triggers reject UPDATE, DELETE and TRUNCATE) and has no foreign keys, so history outlives what it describes.
+- Events today: user email verified; organization created; invitation created, revoked, accepted and rejected; member role changed, removed and left; department created, updated (old and new name), deactivated and reactivated; member added to and removed from a department (membership id only); request submitted, approved, rejected and changes requested (reference number only); request assigned and assignee removed (reference number and the assignee's membership id). Drafts are private working state and are not audited; review comments are never audited (they are in the request history).- The table is append-only (triggers reject UPDATE, DELETE and TRUNCATE) and has no foreign keys, so history outlives what it describes.
 - **Viewing:** Owners and Admins (AUDIT_VIEW) can read their organization's log, newest first, paginated and filterable by event type and date range, through `GET /api/orgs/{orgId}/audit` and the Audit screen. The query is always scoped by organization, so events without an organization (platform-level) never appear there. The API returns random identifiers for actor and target; the screen shows only names, labels and allow-listed metadata. Email addresses and review comments are not in the log.
 - **Not built yet:** platform-level audit viewing (with platform administration), export, text search and filtering by actor, and retention tooling.
 
@@ -179,6 +189,7 @@ Honest list, in rough priority order:
 11. **Logging policy** (what may appear in logs, including addresses inside third-party error messages) is not formalized yet.
 12. **OpenAPI exposure:** springdoc endpoints exist but are reachable only after authentication; the per-environment policy is undecided.
 13. **No row-level security** yet; planned as defense in depth (Phase 8). **No Maven vulnerability scan** in CI yet.
-14. **Service requests are incomplete:** no way to assign, reassign, withdraw or cancel a request, and drafts cannot be deleted. There is no organization setting to allow self-approval (it is always refused). The request history has no pagination (capped at 500 events). Creators cannot change a request's reference number or creator, and there is no history of draft edits. Nothing here has had an external security review.
+14. **Service requests are incomplete:** no way to withdraw or cancel a request, and drafts cannot be deleted. There is no organization setting to allow self-approval (it is always refused). The request history has no pagination (capped at 500 events). Creators cannot change a request's reference number or creator, and there is no history of draft edits.
 15. **Audit viewer scope:** date filters use UTC calendar days; there is no export or actor filter; the log shows only events recorded since each feature was built (earlier activity before auditing existed has no entries).
+16. **Assignment limits:** the reviewer picker is capped at 100 members; assignments cleared because a member was removed or demoted leave no history event (the audited member change explains them); decided requests keep their old assignee even if that member later leaves.
 Nothing here has had an external security review. This project should not be treated as production-ready.

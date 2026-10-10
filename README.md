@@ -2,7 +2,7 @@
 
 A multi-tenant **Business Operations SaaS** platform. Independent organizations share one application and manage their members, departments, internal service requests, approval workflows and audit history, with **strict tenant isolation**: a user of Organization A can never access Organization B's private data.
 
-> **Status: Phase 7 in progress (dashboard done; request assignment and polish next).** You can register, verify your email, create organizations, invite people, manage members and roles, organize members into departments, create and edit service requests, submit and review them with a full history, read the audit log as Owner or Admin, and see a dashboard of counts, what awaits your review and recent activity, with tenant isolation enforced and tested. Request assignment, platform administration and the hardening and deployment phases are **not done yet**. See [Status and roadmap](#status-and-roadmap) and [docs/status.md](docs/status.md).
+> **Status: Phase 7 complete (dashboard, request assignment and accessibility pass).** You can register, verify your email, create organizations, invite people, manage members and roles, organize members into departments, create and edit service requests, submit, assign and review them with a full history, read the audit log as Owner or Admin, and use a dashboard with your queues and recent activity, all with tenant isolation enforced and tested. Security hardening, deployment and the demonstration phase are **not done yet**. See [Status and roadmap](#status-and-roadmap) and [docs/status.md](docs/status.md).
 
 ## What exists today
 
@@ -13,6 +13,8 @@ A multi-tenant **Business Operations SaaS** platform. Independent organizations 
 - An approval workflow with screens: submit, approve, reject and request changes (comments required where they matter), a per-request history, a rule that nobody reviews their own request, and protection against two reviewers deciding at once.
 - An audit log screen for Owners and Admins: who did what, newest first, filterable by event type and date, with no personal data or review comments in it.
 - A dashboard for every member: requests by status, what awaits your review, your own requests and recent activity. Employees see their own figures; reviewers see the organization's. Every number links to the matching filtered request list and always agrees with it.
+- Request assignment: a reviewer assigns a submitted request to a reviewer (or to themselves), recorded in the history and the audit log; reviewers see "Assigned to you" on the dashboard and as a list filter. Assignment is advisory, never a lock, and clears itself when the assignee is removed or can no longer review.
+- Accessibility and responsive layout: page titles, focus moved to the content after navigation, a skip link, labeled scrollable tables, and wrapping navigation on narrow screens.
 - Departments (create, search, update, deactivate, assign and remove members) and internal service requests (reference numbers such as `REQ-000042`, drafts, editing by the creator, filtering, search, pagination), with screens and API.- An append-only audit log written in the same transaction as each change.
 - React + TypeScript frontend for all of the above, with loading, empty, validation and error states.
 - Integration tests against a real PostgreSQL (Testcontainers), a reusable cross-tenant isolation test battery, frontend component tests, formatting and lint checks, GitHub Actions CI and Dependabot.
@@ -20,7 +22,7 @@ A multi-tenant **Business Operations SaaS** platform. Independent organizations 
 
 ## Planned features (MVP)
 
-Assigning requests (and an "assigned to me" view), then security hardening, deployment and the demonstration phase. See [docs/architecture.md](docs/architecture.md) and [docs/status.md](docs/status.md).
+Security hardening (headers, architecture tests, dependency scanning, load and failure testing), then deployment, a demonstration with seed data and screenshots, and end-to-end tests. See [docs/architecture.md](docs/architecture.md) and [docs/status.md](docs/status.md).
 
 ## Tech stack
 
@@ -103,6 +105,7 @@ docker compose up -d
 9. As the creator, open a request and **Submit for review**. As the invited Manager, open it: **Approve**, **Reject** or **Request changes** (a comment is required for the last two). The History on the request page shows every step. You cannot review your own request.
 10. As Owner, open **Audit** to see who did what, and filter by event type or date.
 11. Open the organization's home page: the dashboard shows requests by status, what is waiting for your review, and recent activity. Click any count to open the matching list.
+12. On a submitted request, as a reviewer, use **Assignment** to assign it to a colleague or to yourself. The colleague sees it under **Assigned to you** on their dashboard.
 
 There are no pre-created demo accounts yet; demo data is planned.
 
@@ -195,13 +198,13 @@ nexus/
 | 4 | Memberships, invitations, roles | Done |
 | 5 | Departments and service requests | Done |
 | 6 | Approval workflow and audit history | Done |
-| 7 | React dashboard and user experience | In progress (dashboard done) |
-| 8 | Security hardening and testing | Planned |
+| 7 | React dashboard and user experience | Done |
+| 8 | Security hardening and testing | Next |
 | 9 | Deployment, documentation, demonstration | Planned |
 
 ## Known limitations
 
-- Requests cannot be assigned, withdrawn or cancelled; no platform administration; organization settings are not editable; no password reset.
+- Requests cannot be withdrawn or cancelled; no platform administration; organization settings are not editable; no password reset.
 - No demo accounts, screenshots or deployment guide yet.
 - See [docs/security.md](docs/security.md) for the full, honest list of remaining security work.
 - Not production-ready. Nothing here has been security-reviewed or deployed.

@@ -4,7 +4,6 @@ import com.l2c.nexus.dashboard.application.DashboardService.Dashboard;
 import com.l2c.nexus.dashboard.application.DashboardService.Scope;
 import com.l2c.nexus.dashboard.application.DashboardService.Summary;
 import com.l2c.nexus.request.application.RequestStatistics.RecentEvent;
-import com.l2c.nexus.request.domain.RequestAction;
 import com.l2c.nexus.request.domain.RequestStatus;
 import java.time.Instant;
 import java.util.List;
@@ -13,13 +12,15 @@ import java.util.UUID;
 
 /**
  * "scope" says what total and byStatus cover (the whole organization, or only your own requests).
- * awaitingReview is null for people who cannot review. "mine" is always your own requests.
+ * awaitingReview and assignedToMe are null for people who cannot review. "mine" is always your own
+ * requests.
  */
 public record DashboardResponse(
         Scope scope,
         long total,
         Map<RequestStatus, Long> byStatus,
         Long awaitingReview,
+        Long assignedToMe,
         Mine mine,
         List<RecentResponse> recent) {
 
@@ -30,9 +31,10 @@ public record DashboardResponse(
             UUID requestId,
             String reference,
             String title,
-            RequestAction action,
+            String action,
             RequestStatus toStatus,
             String actorName,
+            String targetName,
             Instant occurredAt) {}
 
     static DashboardResponse from(Dashboard dashboard) {
@@ -42,6 +44,7 @@ public record DashboardResponse(
                 overall.total(),
                 overall.byStatus(),
                 dashboard.awaitingReview(),
+                dashboard.assignedToMe(),
                 new Mine(dashboard.mine().total(), dashboard.mine().byStatus()),
                 dashboard.recent().stream().map(DashboardResponse::recent).toList());
     }
@@ -55,6 +58,7 @@ public record DashboardResponse(
                 event.action(),
                 event.toStatus(),
                 event.actorName(),
+                event.targetName(),
                 event.occurredAt());
     }
 }

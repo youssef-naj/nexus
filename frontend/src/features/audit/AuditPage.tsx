@@ -19,6 +19,7 @@ import { PaginationBar } from "@/shared/components/PaginationBar"
 import { formatDateTime } from "@/shared/format"
 import { EVENT_LABELS, EVENT_TYPES, describeMetadata, eventLabel } from "./labels"
 import { useAudit } from "./queries"
+import { ScrollRegion } from "@/shared/components/ScrollRegion"
 
 export function AuditPage() {
   const { organization } = useOrg()
@@ -113,28 +114,30 @@ export function AuditPage() {
               {filtering ? "No events match these filters." : "No audit events yet."}
             </p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>When</TableHead>
-                  <TableHead>Event</TableHead>
-                  <TableHead>By</TableHead>
-                  <TableHead>Details</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {audit.data.content.map((entry) => (
-                  <TableRow key={entry.id}>
-                    <TableCell className="whitespace-nowrap">
-                      {formatDateTime(entry.occurredAt)}
-                    </TableCell>
-                    <TableCell className="font-medium">{eventLabel(entry.eventType)}</TableCell>
-                    <TableCell>{entry.actorName ?? "System"}</TableCell>
-                    <TableCell>{describeMetadata(entry.metadata)}</TableCell>
+            <ScrollRegion label="Audit events">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>When</TableHead>
+                    <TableHead>Event</TableHead>
+                    <TableHead>By</TableHead>
+                    <TableHead>Details</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {audit.data.content.map((entry) => (
+                    <TableRow key={entry.id}>
+                      <TableCell className="whitespace-nowrap">
+                        {formatDateTime(entry.occurredAt)}
+                      </TableCell>
+                      <TableCell className="font-medium">{eventLabel(entry.eventType)}</TableCell>
+                      <TableCell>{entry.actorName ?? "System"}</TableCell>
+                      <TableCell>{describeMetadata(entry.metadata)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </ScrollRegion>
           )}
           <PaginationBar page={page} totalPages={audit.data.totalPages} onPageChange={setPage} />
         </>

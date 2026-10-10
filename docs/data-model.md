@@ -1,132 +1,133 @@
 # Data model
 
-Implemented through Flyway migrations **V1 to V11**: `users`, `user_tokens`, `spring_session`, `audit_logs`, `organizations`, `memberships`, `invitations`, `departments`, `department_memberships`, `service_requests` and `request_events`.
+Implemented through Flyway migrations **V1 to V12**: `users`, `user_tokens`, `spring_session`, `audit_logs`, `organizations`, `memberships`, `invitations`, `departments`, `department_memberships`, `service_requests` and `request_events`.
 
 ## Entity relationship diagram (target model)
 
 ```mermaid
 erDiagram
-    USERS ||--o{ MEMBERSHIPS : "has"
-    USERS ||--o{ USER_TOKENS : "receives"
-    ORGANIZATIONS ||--o{ MEMBERSHIPS : "has"
-    ORGANIZATIONS ||--o{ INVITATIONS : "issues"
-    ORGANIZATIONS ||--o{ DEPARTMENTS : "owns"
-    ORGANIZATIONS ||--o{ SERVICE_REQUESTS : "owns"
-    ORGANIZATIONS ||--o{ AUDIT_LOGS : "scopes"
-    MEMBERSHIPS ||--o{ INVITATIONS : "invites"
-    MEMBERSHIPS ||--o{ DEPARTMENT_MEMBERSHIPS : "assigned"
-    DEPARTMENTS ||--o{ DEPARTMENT_MEMBERSHIPS : "groups"
-    MEMBERSHIPS ||--o{ SERVICE_REQUESTS : "creates / reviews"
-    SERVICE_REQUESTS ||--o{ REQUEST_EVENTS : "history"
-    MEMBERSHIPS ||--o{ REQUEST_EVENTS : "acts"
+  USERS ||--o{ MEMBERSHIPS: "has"
+  USERS ||--o{ USER_TOKENS: "receives"
+  ORGANIZATIONS ||--o{ MEMBERSHIPS: "has"
+  ORGANIZATIONS ||--o{ INVITATIONS: "issues"
+  ORGANIZATIONS ||--o{ DEPARTMENTS: "owns"
+  ORGANIZATIONS ||--o{ SERVICE_REQUESTS: "owns"
+  ORGANIZATIONS ||--o{ AUDIT_LOGS: "scopes"
+  MEMBERSHIPS ||--o{ INVITATIONS: "invites"
+  MEMBERSHIPS ||--o{ DEPARTMENT_MEMBERSHIPS: "assigned"
+  DEPARTMENTS ||--o{ DEPARTMENT_MEMBERSHIPS: "groups"
+  MEMBERSHIPS ||--o{ SERVICE_REQUESTS: "creates / reviews"
+  SERVICE_REQUESTS ||--o{ REQUEST_EVENTS: "history"
+  MEMBERSHIPS ||--o{ REQUEST_EVENTS: "acts"
 
-    USERS {
-        uuid id PK
-        text email UK "case-insensitive"
-        text password_hash
-        text display_name
-        text status "ACTIVE, DISABLED"
-        timestamptz email_verified_at
-        text platform_role "nullable"
-        timestamptz created_at
-        timestamptz updated_at
-        bigint version
-    }
-    USER_TOKENS {
-        uuid id PK
-        uuid user_id FK
-        text type "VERIFY_EMAIL, PASSWORD_RESET"
-        text token_hash UK
-        timestamptz expires_at
-        timestamptz used_at
-        timestamptz created_at
-    }
-    ORGANIZATIONS {
-        uuid id PK
-        text name
-        text slug UK
-        text status "ACTIVE, SUSPENDED"
-        bigint request_counter
-        bigint version
-        timestamptz created_at
-        timestamptz updated_at
-    }
-    MEMBERSHIPS {
-        uuid id PK
-        uuid organization_id FK
-        uuid user_id FK
-        text role "OWNER, ADMIN, MANAGER, EMPLOYEE"
-        text status "ACTIVE, REVOKED"
-        bigint version
-        timestamptz created_at
-        timestamptz updated_at
-    }
-    INVITATIONS {
-        uuid id PK
-        uuid organization_id FK
-        text email "lowercase"
-        text role
-        text token_hash UK
-        text status "PENDING, ACCEPTED, REJECTED, REVOKED"
-        uuid invited_by_membership_id FK "same organization"
-        timestamptz expires_at
-        timestamptz created_at
-        timestamptz decided_at
-        bigint version
-    }
-    DEPARTMENTS {
-      uuid id PK
-      uuid organization_id FK
-      text name "unique per org, ignoring case"
-      text description
-      boolean active
-      timestamptz created_at
-      timestamptz updated_at
-      bigint version
-    }
-    DEPARTMENT_MEMBERSHIPS {
-      uuid organization_id FK
-      uuid department_id FK "PK part, same organization"
-      uuid membership_id FK "PK part, same organization"
-      timestamptz created_at
-    }
-    SERVICE_REQUESTS {
-        uuid id PK
-        uuid organization_id FK
-        text reference "unique per org"
-        text title
-        text description
-        text category
-        text status
-        uuid created_by_membership_id FK
-        uuid assignee_membership_id FK
-        uuid department_id FK
-        date due_date
-        bigint version
-        timestamptz created_at
-        timestamptz updated_at
-    }
-    REQUEST_EVENTS {
-        uuid id PK
-        uuid organization_id FK
-        uuid request_id FK
-        uuid actor_membership_id FK
-        text action
-        text from_status
-        text to_status
-        text comment
-        timestamptz occurred_at
-    }
-    AUDIT_LOGS {
-        uuid id PK
-        uuid organization_id "nullable, platform events"
-        uuid actor_user_id
-        text event_type
-        text target_type
-        uuid target_id
-        jsonb metadata "allow-listed fields"
-        timestamptz occurred_at
-    }
+  USERS {
+    uuid id PK
+    text email UK "case-insensitive"
+    text password_hash
+    text display_name
+    text status "ACTIVE, DISABLED"
+    timestamptz email_verified_at
+    text platform_role "nullable"
+    timestamptz created_at
+    timestamptz updated_at
+    bigint version
+  }
+  USER_TOKENS {
+    uuid id PK
+    uuid user_id FK
+    text type "VERIFY_EMAIL, PASSWORD_RESET"
+    text token_hash UK
+    timestamptz expires_at
+    timestamptz used_at
+    timestamptz created_at
+  }
+  ORGANIZATIONS {
+    uuid id PK
+    text name
+    text slug UK
+    text status "ACTIVE, SUSPENDED"
+    bigint request_counter
+    bigint version
+    timestamptz created_at
+    timestamptz updated_at
+  }
+  MEMBERSHIPS {
+    uuid id PK
+    uuid organization_id FK
+    uuid user_id FK
+    text role "OWNER, ADMIN, MANAGER, EMPLOYEE"
+    text status "ACTIVE, REVOKED"
+    bigint version
+    timestamptz created_at
+    timestamptz updated_at
+  }
+  INVITATIONS {
+    uuid id PK
+    uuid organization_id FK
+    text email "lowercase"
+    text role
+    text token_hash UK
+    text status "PENDING, ACCEPTED, REJECTED, REVOKED"
+    uuid invited_by_membership_id FK "same organization"
+    timestamptz expires_at
+    timestamptz created_at
+    timestamptz decided_at
+    bigint version
+  }
+  DEPARTMENTS {
+    uuid id PK
+    uuid organization_id FK
+    text name "unique per org, ignoring case"
+    text description
+    boolean active
+    timestamptz created_at
+    timestamptz updated_at
+    bigint version
+  }
+  DEPARTMENT_MEMBERSHIPS {
+    uuid organization_id FK
+    uuid department_id FK "PK part, same organization"
+    uuid membership_id FK "PK part, same organization"
+    timestamptz created_at
+  }
+  SERVICE_REQUESTS {
+    uuid id PK
+    uuid organization_id FK
+    text reference "unique per org"
+    text title
+    text description
+    text category
+    text status
+    uuid created_by_membership_id FK
+    uuid assignee_membership_id FK
+    uuid department_id FK
+    date due_date
+    bigint version
+    timestamptz created_at
+    timestamptz updated_at
+  }
+  REQUEST_EVENTS {
+    uuid id PK
+    uuid organization_id FK
+    uuid request_id FK
+    uuid actor_membership_id FK
+    text action "SUBMIT, APPROVE, REJECT, REQUEST_CHANGES, ASSIGN, UNASSIGN"
+    text from_status
+    text to_status
+    text comment
+    uuid target_membership_id FK "only for ASSIGN and UNASSIGN, same organization"
+    timestamptz occurred_at
+  }
+  AUDIT_LOGS {
+    uuid id PK
+    uuid organization_id "nullable, platform events"
+    uuid actor_user_id
+    text event_type
+    text target_type
+    uuid target_id
+    jsonb metadata "allow-listed fields"
+    timestamptz occurred_at
+  }
 ```
 
 ## Tables
@@ -142,12 +143,12 @@ erDiagram
 | `invitations` | Pending, accepted, rejected or revoked invitations (token hash only). | **Implemented (V6)** |
 | `departments` | Organization-scoped groupings, deactivated rather than deleted. | **Implemented (V7)** |
 | `department_memberships` | Assigns members to departments. Composite foreign keys keep both sides in the row's organization. | **Implemented (V8)** |
-| `service_requests` | The business object that moves through the approval workflow. Drafts only until the workflow phase. | **Implemented (V9)** |
-| `request_events` | `ix_request_events_org_time` on `(organization_id, occurred_at DESC)` | The dashboard's recent activity: one organization's request events, newest first | Implemented (V11) |
+| `service_requests` | The business object that moves through the approval workflow, with an optional assignee (a reviewer, advisory). | **Implemented (V9)** |
+| `request_events` | Append-only history of each request: workflow transitions (actor, action, from and to status, comment) and assignment changes (ASSIGN and UNASSIGN with the member concerned). Composite foreign keys to the request, the actor and the target; triggers reject UPDATE, DELETE and TRUNCATE. | **Implemented (V10, V12)** |
 
 ## Key design decisions
 
-**Tenant ownership is enforced by the database.** `memberships` exposes `UNIQUE (organization_id, id)`; tenant tables reference memberships (and later departments) with **composite foreign keys**. A row for Organization A therefore cannot reference a member of Organization B, even if application code is wrong. Live examples, each tested directly with raw SQL: `fk_invitations_inviter` (invitations), `fk_dm_department` and `fk_dm_membership` (department assignments), `fk_requests_creator`, `fk_requests_assignee` and `fk_requests_department` (service requests), and `fk_request_events_request` and `fk_request_events_actor` (request history). A NULL assignee or department simply skips its key, which is how "optional" is expressed.
+**Tenant ownership is enforced by the database.** `memberships` exposes `UNIQUE (organization_id, id)`; tenant tables reference memberships (and later departments) with **composite foreign keys**. A row for Organization A therefore cannot reference a member of Organization B, even if application code is wrong. Live examples, each tested directly with raw SQL: `fk_invitations_inviter` (invitations), `fk_dm_department` and `fk_dm_membership` (department assignments), `fk_requests_creator`, `fk_requests_assignee` and `fk_requests_department` (service requests), and `fk_request_events_request`, `fk_request_events_actor` and `fk_request_events_target` (request history). A NULL assignee, department or target simply skips its key, which is how "optional" is expressed.
 
 **Tenant tables reference memberships, not users.** A creator, assignee or reviewer must be a member of that organization. Because memberships are never deleted, history stays valid after a member is revoked or leaves.
 
@@ -163,6 +164,8 @@ erDiagram
 
 **Request history:** `request_events` rows are never changed or removed (database triggers, as for the audit log), and the table has real foreign keys, because a request's history must stay attached to the request and the actor inside one organization. Unlike `audit_logs`, it holds the free-text review comments and is readable by anyone who can see the request.
 
+**Assignment events:** an ASSIGN or UNASSIGN event names the member concerned in `target_membership_id`; a check constraint (`ck_request_events_target_matches_action`) requires a target exactly for those two actions and forbids one on workflow transitions. Clearing an assignee because the member was removed or demoted is not a history event: it is a consequence of an audited member change.
+
 **Invariants in the database, not only in code:** unique membership per user and organization; valid roles and statuses; slug format; at most one pending invitation per (organization, email) through a partial unique index; an invitation's decision time is set exactly when it is no longer pending.
 
 ## Constraints and indexes
@@ -174,6 +177,8 @@ Indexes exist only for a named query. Planned ones must be verified with `EXPLAI
 | `users` | `uq_users_email_lower` on `lower(email)` | Login lookup and case-insensitive uniqueness | Implemented |
 | `user_tokens` | unique `token_hash`; index `(user_id, type)` | Token lookup; invalidating earlier tokens of one type | Implemented |
 | `audit_logs` | `ix_audit_logs_org_time` on `(organization_id, occurred_at DESC)` | The organization audit view | Implemented |
+| `request_events` | `ck_request_events_target_matches_action`, `fk_request_events_target` | Assignment events always name a member of the same organization; transitions never do | Implemented (V12) |
+| `service_requests` | `ix_requests_org_assignee_status` partial index on `(organization_id, assignee_membership_id, status) WHERE assignee_membership_id IS NOT NULL` | "Assigned to me" lists and the dashboard count | Implemented (V12) |
 | `organizations` | unique `slug`; slug format check | Stable readable label (never used for access) | Implemented |
 | `memberships` | unique `(organization_id, user_id)` | No duplicate membership; the gate's lookup | Implemented |
 | `memberships` | unique `(organization_id, id)` | Target of composite foreign keys | Implemented |
@@ -189,7 +194,6 @@ Indexes exist only for a named query. Planned ones must be verified with `EXPLAI
 | `service_requests` | `uq_requests_org_id` on `(organization_id, id)` | Target of the composite key of request events | Implemented |
 | `service_requests` | `ix_requests_org_status_created` on `(organization_id, status, created_at DESC)` | Request list filtered by status; dashboard counts | Implemented |
 | `service_requests` | `ix_requests_org_creator_created` on `(organization_id, created_by_membership_id, created_at DESC)` | "My requests" and the employee's restricted list | Implemented |
-| `service_requests` | `(organization_id, assignee_membership_id)` | "Assigned to me" | Planned: added when that query exists |
 | `request_events` | `ix_request_events_request_time` on `(organization_id, request_id, occurred_at)` | A request's history, oldest first | Implemented |
 
 ## Request reference numbers

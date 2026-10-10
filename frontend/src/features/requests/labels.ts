@@ -63,7 +63,12 @@ const ACTION_PAST: Record<string, string> = {
   REQUEST_CHANGES: "requested changes",
 }
 
-export function actionPastTense(action: string): string {
+/** A short phrase for a history or activity entry. targetName is who an assignment concerns. */
+export function actionPastTense(action: string, targetName?: string | null): string {
+  if (action === "ASSIGN") return `assigned the request to ${targetName ?? "someone"}`
+  if (action === "UNASSIGN") {
+    return targetName ? `removed ${targetName} as assignee` : "removed the assignee"
+  }
   return ACTION_PAST[action] ?? action.toLowerCase().replaceAll("_", " ")
 }
 

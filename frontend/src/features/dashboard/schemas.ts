@@ -10,6 +10,8 @@ export const dashboardSchema = z.object({
   byStatus: countsSchema,
   /** Null for people who cannot review. */
   awaitingReview: z.number().nullish(),
+  /** Submitted requests assigned to you; null for people who cannot review. */
+  assignedToMe: z.number().nullish(),
   mine: z.object({ total: z.number(), byStatus: countsSchema }),
   recent: z.array(
     z.object({
@@ -21,6 +23,7 @@ export const dashboardSchema = z.object({
       action: z.string(),
       toStatus: statusSchema,
       actorName: z.string(),
+      targetName: z.string().nullish(),
       occurredAt: z.string(),
     }),
   ),

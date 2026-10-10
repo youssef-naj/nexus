@@ -16,7 +16,7 @@ export function AppLayout() {
         Skip to content
       </a>
       <header className="border-b">
-        <div className="mx-auto flex max-w-5xl items-center justify-between p-4">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 p-4">
           <div className="flex items-center gap-3">
             <Link to="/" className="text-lg font-semibold">
               Nexus
@@ -36,7 +36,7 @@ export function AppLayout() {
           </div>
         </div>
       </header>
-      <main id="main" className="mx-auto max-w-5xl p-4">
+      <main id="main" tabIndex={-1} className="mx-auto max-w-5xl p-4 outline-none">
         <Outlet />
       </main>
     </div>

@@ -33,7 +33,8 @@ public class RequestQueries {
             String query,
             Instant createdFrom,
             Instant createdBefore,
-            UUID excludeCreatorMembershipId) {}
+            UUID excludeCreatorMembershipId,
+            UUID assigneeMembershipId) {}
 
     public record SummaryPage(List<RequestSummary> items, long total) {}
 
@@ -99,6 +100,10 @@ public class RequestQueries {
         if (filter.excludeCreatorMembershipId() != null) {
             where.append(" AND r.created_by_membership_id <> ?");
             params.add(filter.excludeCreatorMembershipId());
+        }
+        if (filter.assigneeMembershipId() != null) {
+            where.append(" AND r.assignee_membership_id = ?");
+            params.add(filter.assigneeMembershipId());
         }
         if (filter.query() != null) {
             where.append(

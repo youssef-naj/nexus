@@ -5,6 +5,7 @@ import {
   requestDetailSchema,
   requestEventSchema,
   requestPageSchema,
+  reviewerSchema,
   type RequestAction,
   type RequestPayload,
 } from "./schemas"
@@ -60,6 +61,35 @@ export async function transitionRequest(
     await apiFetch<unknown>(`${one(orgId, requestId)}/transitions`, {
       method: "POST",
       body: JSON.stringify({ action, version, comment }),
+    }),
+  )
+}
+
+export async function fetchReviewers(orgId: string) {
+  return z
+    .array(reviewerSchema)
+    .parse(await apiFetch<unknown>(`/orgs/${encodeURIComponent(orgId)}/reviewers`))
+}
+
+export async function assignRequest(
+  orgId: string,
+  requestId: string,
+  membershipId: string,
+  version: number,
+) {
+  return requestDetailSchema.parse(
+    await apiFetch<unknown>(`${one(orgId, requestId)}/assignee`, {
+      method: "PUT",
+      body: JSON.stringify({ membershipId, version }),
+    }),
+  )
+}
+
+/** Removing the assignee is a DELETE with the version, never a PUT with an empty value. */
+export async function unassignRequest(orgId: string, requestId: string, version: number) {
+  return requestDetailSchema.parse(
+    await apiFetch<unknown>(`${one(orgId, requestId)}/assignee${buildQuery({ version })}`, {
+      method: "DELETE",
     }),
   )
 }

@@ -53,37 +53,75 @@ export function DashboardPage() {
   )
 }
 
+/** A queue card for reviewers: a count that links to the matching filtered list. */
+function QueueCard({
+  id,
+  title,
+  count,
+  href,
+  emptyText,
+  suffix,
+}: {
+  id: string
+  title: string
+  count: number
+  href: string
+  emptyText: string
+  suffix: string
+}) {
+  return (
+    <section aria-labelledby={id} className="rounded-lg border p-4">
+      <h2 id={id} className="text-lg font-semibold">
+        {title}
+      </h2>
+      {count === 0 ? (
+        <p className="mt-1 text-sm text-muted-foreground">{emptyText}</p>
+      ) : (
+        <p className="mt-1">
+          <Link className="text-3xl font-semibold underline-offset-4 hover:underline" to={href}>
+            {count}
+          </Link>{" "}
+          <span className="text-sm text-muted-foreground">
+            {count === 1 ? "request" : "requests"} {suffix}
+          </span>
+        </p>
+      )}
+    </section>
+  )
+}
+
 function DashboardContent({ data }: { data: Dashboard }) {
   const { organization, can } = useOrg()
   const requestsPath = `/orgs/${organization.id}/requests`
   const organizationWide = data.scope === "ORGANIZATION"
   const awaiting = data.awaitingReview ?? null
+  const assigned = data.assignedToMe ?? null
 
   return (
     <>
-      {awaiting !== null && (
-        <section aria-labelledby="awaiting-heading" className="rounded-lg border p-4">
-          <h2 id="awaiting-heading" className="text-lg font-semibold">
-            Awaiting your review
-          </h2>
-          {awaiting === 0 ? (
-            <p className="mt-1 text-sm text-muted-foreground">
-              Nothing is waiting for your review.
-            </p>
-          ) : (
-            <p className="mt-1">
-              <Link
-                className="text-3xl font-semibold underline-offset-4 hover:underline"
-                to={`${requestsPath}?reviewable=true`}
-              >
-                {awaiting}
-              </Link>{" "}
-              <span className="text-sm text-muted-foreground">
-                {awaiting === 1 ? "request" : "requests"} submitted by others
-              </span>
-            </p>
+      {(assigned !== null || awaiting !== null) && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {assigned !== null && (
+            <QueueCard
+              id="assigned-heading"
+              title="Assigned to you"
+              count={assigned}
+              href={`${requestsPath}?assignedToMe=true`}
+              emptyText="Nothing is assigned to you."
+              suffix="assigned to you"
+            />
           )}
-        </section>
+          {awaiting !== null && (
+            <QueueCard
+              id="awaiting-heading"
+              title="Awaiting your review"
+              count={awaiting}
+              href={`${requestsPath}?reviewable=true`}
+              emptyText="Nothing is waiting for your review."
+              suffix="submitted by others"
+            />
+          )}
+        </div>
       )}
 
       <section aria-labelledby="status-heading" className="grid gap-3">
@@ -122,11 +160,9 @@ function DashboardContent({ data }: { data: Dashboard }) {
         <p className="text-sm text-muted-foreground">
           {organizationWide ? `${data.total} in total.` : null}{" "}
           {organizationWide && (
-            <>
-              <Link className="underline" to={`${requestsPath}?mine=true`}>
-                You created {data.mine.total} {data.mine.total === 1 ? "request" : "requests"}.
-              </Link>
-            </>
+            <Link className="underline" to={`${requestsPath}?mine=true`}>
+              You created {data.mine.total} {data.mine.total === 1 ? "request" : "requests"}.
+            </Link>
           )}
         </p>
       </section>
@@ -144,7 +180,7 @@ function DashboardContent({ data }: { data: Dashboard }) {
             {data.recent.map((event) => (
               <li key={event.id} className="text-sm">
                 <span className="font-medium">{event.actorName}</span>{" "}
-                {actionPastTense(event.action)}{" "}
+                {actionPastTense(event.action, event.targetName)}{" "}
                 <Link className="underline" to={`${requestsPath}/${event.requestId}`}>
                   {event.reference} · {event.title}
                 </Link>

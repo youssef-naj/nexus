@@ -75,7 +75,7 @@ export function OrgLayout() {
   const base = `/orgs/${value.organization.id}`
   return (
     <OrgContext.Provider value={value}>
-      <nav aria-label="Organization" className="mb-4 flex gap-4 border-b">
+      <nav aria-label="Organization" className="mb-4 flex flex-wrap gap-x-4 border-b">
         <OrgNavLink to={base} end>
           Overview
         </OrgNavLink>

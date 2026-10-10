@@ -1,8 +1,7 @@
 import { useState } from "react"
 import { Link, useSearchParams } from "react-router"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
-import { buttonVariants } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -18,6 +17,7 @@ import { useAllDepartments } from "@/features/departments/queries"
 import { useOrg } from "@/features/organizations/orgContext"
 import { NativeSelect } from "@/shared/components/NativeSelect"
 import { PaginationBar } from "@/shared/components/PaginationBar"
+import { ScrollRegion } from "@/shared/components/ScrollRegion"
 import { formatDate, formatDueDate } from "@/shared/format"
 import { categoryLabel, statusLabel } from "./labels"
 import { RequestStatusBadge } from "./RequestStatusBadge"
@@ -61,6 +61,9 @@ export function RequestsPage() {
   const [reviewable, setReviewable] = useState(
     () => searchParams.get("reviewable") === "true" && canReview,
   )
+  const [assignedToMe, setAssignedToMe] = useState(
+    () => searchParams.get("assignedToMe") === "true" && canReview,
+  )
   const [sortKey, setSortKey] = useState<SortKey>("newest")
   const [searchInput, setSearchInput] = useState("")
   const [query, setQuery] = useState("")
@@ -73,11 +76,14 @@ export function RequestsPage() {
     departmentId,
     mine: mine || undefined,
     reviewable: reviewable || undefined,
+    assignedToMe: assignedToMe || undefined,
     q: query,
     sort: SORTS[sortKey].sort,
     direction: SORTS[sortKey].direction,
   })
-  const filtering = Boolean(status || category || departmentId || mine || reviewable || query)
+  // Both review queues are lists of submitted requests, so they fix the status
+  const queueFilter = reviewable || assignedToMe
+  const filtering = Boolean(status || category || departmentId || mine || queueFilter || query)
 
   function changed<T>(setter: (value: T) => void) {
     return (value: T) => {
@@ -107,7 +113,7 @@ export function RequestsPage() {
           <NativeSelect
             id="filter-status"
             value={status}
-            disabled={reviewable}
+            disabled={queueFilter}
             onChange={(event) =>
               changed(setStatus)(statusSchema.safeParse(event.target.value).data ?? "")
             }
@@ -178,17 +184,30 @@ export function RequestsPage() {
           </label>
         )}
         {canReview && (
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={reviewable}
-              onChange={(event) => {
-                if (event.target.checked) setStatus("")
-                changed(setReviewable)(event.target.checked)
-              }}
-            />
-            Awaiting my review
-          </label>
+          <>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={reviewable}
+                onChange={(event) => {
+                  if (event.target.checked) setStatus("")
+                  changed(setReviewable)(event.target.checked)
+                }}
+              />
+              Awaiting my review
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={assignedToMe}
+                onChange={(event) => {
+                  if (event.target.checked) setStatus("")
+                  changed(setAssignedToMe)(event.target.checked)
+                }}
+              />
+              Assigned to me
+            </label>
+          </>
         )}
         <form
           className="flex items-end gap-2"
@@ -231,40 +250,44 @@ export function RequestsPage() {
               {filtering ? "No requests match these filters." : "No requests yet."}
             </p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Reference</TableHead>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Status</TableHead>
-                  {canViewAll && <TableHead>Created by</TableHead>}
-                  <TableHead>Department</TableHead>
-                  <TableHead>Due</TableHead>
-                  <TableHead>Updated</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {requests.data.content.map((request) => (
-                  <TableRow key={request.id}>
-                    <TableCell className="whitespace-nowrap">{request.reference}</TableCell>
-                    <TableCell className="font-medium">
-                      <Link className="underline-offset-4 hover:underline" to={request.id}>
-                        {request.title}
-                      </Link>
-                    </TableCell>
-                    <TableCell>{categoryLabel(request.category)}</TableCell>
-                    <TableCell>
-                      <RequestStatusBadge status={request.status} />
-                    </TableCell>
-                    {canViewAll && <TableCell>{request.createdByName}</TableCell>}
-                    <TableCell>{request.departmentName ?? "—"}</TableCell>
-                    <TableCell>{request.dueDate ? formatDueDate(request.dueDate) : "—"}</TableCell>
-                    <TableCell>{formatDate(request.updatedAt)}</TableCell>
+            <ScrollRegion label="Requests">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Reference</TableHead>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Status</TableHead>
+                    {canViewAll && <TableHead>Created by</TableHead>}
+                    <TableHead>Department</TableHead>
+                    <TableHead>Due</TableHead>
+                    <TableHead>Updated</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {requests.data.content.map((request) => (
+                    <TableRow key={request.id}>
+                      <TableCell className="whitespace-nowrap">{request.reference}</TableCell>
+                      <TableCell className="font-medium">
+                        <Link className="underline-offset-4 hover:underline" to={request.id}>
+                          {request.title}
+                        </Link>
+                      </TableCell>
+                      <TableCell>{categoryLabel(request.category)}</TableCell>
+                      <TableCell>
+                        <RequestStatusBadge status={request.status} />
+                      </TableCell>
+                      {canViewAll && <TableCell>{request.createdByName}</TableCell>}
+                      <TableCell>{request.departmentName ?? "—"}</TableCell>
+                      <TableCell>
+                        {request.dueDate ? formatDueDate(request.dueDate) : "—"}
+                      </TableCell>
+                      <TableCell>{formatDate(request.updatedAt)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </ScrollRegion>
           )}
           <PaginationBar page={page} totalPages={requests.data.totalPages} onPageChange={setPage} />
         </>

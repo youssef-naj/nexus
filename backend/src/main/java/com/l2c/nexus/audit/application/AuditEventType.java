@@ -25,7 +25,9 @@ public enum AuditEventType {
     REQUEST_SUBMITTED("reference"),
     REQUEST_APPROVED("reference"),
     REQUEST_REJECTED("reference"),
-    REQUEST_CHANGES_REQUESTED("reference");
+    REQUEST_CHANGES_REQUESTED("reference"),
+    REQUEST_ASSIGNED("reference", "assigneeMembershipId"),
+    REQUEST_UNASSIGNED("reference", "assigneeMembershipId");
 
     private final Set<String> allowedMetadataKeys;
 

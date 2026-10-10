@@ -13,6 +13,8 @@ export function requestErrorMessage(error: unknown): string {
         return "Only the person who created a request can edit or submit it."
       case "DEPARTMENT_INACTIVE":
         return "That department is inactive. Choose another."
+      case "REQUEST_NOT_ASSIGNABLE":
+        return "Only a submitted request can be assigned. It was reloaded."
       case "INVALID_TRANSITION":
         return "That action is no longer possible: the request was already handled. It was reloaded."
       case "SELF_REVIEW_NOT_ALLOWED":

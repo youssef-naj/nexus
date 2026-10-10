@@ -14,6 +14,7 @@ import com.l2c.nexus.organization.application.AccessPolicy;
 import com.l2c.nexus.organization.application.OrgContext;
 import com.l2c.nexus.organization.application.OrganizationService;
 import com.l2c.nexus.organization.application.Permission;
+import com.l2c.nexus.request.application.RequestAssignmentService;
 import com.l2c.nexus.shared.error.ConflictException;
 import com.l2c.nexus.shared.error.ForbiddenActionException;
 import com.l2c.nexus.shared.error.NotFoundException;
@@ -37,6 +38,7 @@ public class MemberAdminService {
     private final RoleAssignmentPolicy roles;
     private final AuditService audit;
     private final DepartmentMemberService departmentMembers;
+    private final RequestAssignmentService requestAssignments;
 
     public MemberAdminService(
             MembershipService memberships,
@@ -44,13 +46,15 @@ public class MemberAdminService {
             AccessPolicy policy,
             RoleAssignmentPolicy roles,
             AuditService audit,
-            DepartmentMemberService departmentMembers) {
+            DepartmentMemberService departmentMembers,
+            RequestAssignmentService requestAssignments) {
         this.memberships = memberships;
         this.organizations = organizations;
         this.policy = policy;
         this.roles = roles;
         this.audit = audit;
         this.departmentMembers = departmentMembers;
+        this.requestAssignments = requestAssignments;
     }
 
     @Transactional
@@ -85,6 +89,11 @@ public class MemberAdminService {
 
         MembershipView updated =
                 memberships.changeRole(actor.organizationId(), membershipId, newRole);
+        // A reviewer who can no longer review cannot keep open assignments
+        if (policy.can(target.role(), Permission.REQUEST_REVIEW)
+                && !policy.can(newRole, Permission.REQUEST_REVIEW)) {
+            requestAssignments.clearFor(actor.organizationId(), membershipId);
+        }
         audit.record(
                 AuditEvent.of(
                                 AuditEventType.MEMBER_ROLE_CHANGED,
@@ -118,6 +127,7 @@ public class MemberAdminService {
         }
 
         departmentMembers.clearFor(actor.organizationId(), membershipId);
+        requestAssignments.clearFor(actor.organizationId(), membershipId);
         memberships.revoke(actor.organizationId(), membershipId);
         audit.record(
                 AuditEvent.of(
@@ -137,6 +147,7 @@ public class MemberAdminService {
         }
 
         departmentMembers.clearFor(actor.organizationId(), actor.membershipId());
+        requestAssignments.clearFor(actor.organizationId(), actor.membershipId());
         memberships.revoke(actor.organizationId(), actor.membershipId());
         audit.record(
                 AuditEvent.of(

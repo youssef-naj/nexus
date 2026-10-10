@@ -21,6 +21,8 @@ export const EVENT_LABELS: Record<string, string> = {
   REQUEST_APPROVED: "Request approved",
   REQUEST_REJECTED: "Request rejected",
   REQUEST_CHANGES_REQUESTED: "Changes requested",
+  REQUEST_ASSIGNED: "Request assigned",
+  REQUEST_UNASSIGNED: "Assignee removed",
 }
 
 export const EVENT_TYPES = Object.keys(EVENT_LABELS)

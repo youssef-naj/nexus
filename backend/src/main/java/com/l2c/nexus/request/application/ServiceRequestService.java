@@ -58,7 +58,8 @@ public class ServiceRequestService {
             LocalDate createdFrom,
             LocalDate createdTo,
             String query,
-            boolean reviewable) {}
+            boolean reviewable,
+            boolean assignedToMe) {}
 
     public record RequestPage(List<RequestSummary> items, long total) {}
 
@@ -152,14 +153,20 @@ public class ServiceRequestService {
         }
         RequestStatus status = criteria.status();
         UUID excludeCreator = null;
-        if (criteria.reviewable()) {
-            // "Awaiting my review": submitted requests created by someone else, for reviewers only
-            if (!policy.can(org.role(), Permission.REQUEST_REVIEW)
-                    || (status != null && status != RequestStatus.SUBMITTED)) {
+        UUID assignee = null;
+        boolean reviewer = policy.can(org.role(), Permission.REQUEST_REVIEW);
+        if (criteria.reviewable() || criteria.assignedToMe()) {
+            // Both are queues of submitted requests for reviewers; a conflicting status is empty
+            if (!reviewer || (status != null && status != RequestStatus.SUBMITTED)) {
                 return new RequestPage(List.of(), 0);
             }
             status = RequestStatus.SUBMITTED;
-            excludeCreator = org.membershipId();
+        }
+        if (criteria.reviewable()) {
+            excludeCreator = org.membershipId(); // submitted by someone else
+        }
+        if (criteria.assignedToMe()) {
+            assignee = org.membershipId();
         }
         String query = criteria.query() == null ? null : criteria.query().trim();
         if (query != null && query.isEmpty()) {
@@ -181,7 +188,8 @@ public class ServiceRequestService {
                         criteria.createdTo() == null
                                 ? null
                                 : startOfDay(criteria.createdTo(), 1, "createdTo"),
-                        excludeCreator);
+                        excludeCreator,
+                        assignee);
         RequestQueries.SummaryPage result =
                 queries.search(org.organizationId(), filter, sort, ascending, page, size);
         return new RequestPage(result.items(), result.total());

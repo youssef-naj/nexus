@@ -112,6 +112,20 @@ public class ServiceRequest {
         this.updatedAt = now;
     }
 
+    public void assignTo(UUID membershipId, Instant now) {
+        this.assigneeMembershipId = membershipId;
+        this.updatedAt = now;
+    }
+
+    public void clearAssignee(Instant now) {
+        this.assigneeMembershipId = null;
+        this.updatedAt = now;
+    }
+
+    public UUID getAssigneeMembershipId() {
+        return assigneeMembershipId;
+    }
+
     public UUID getId() {
         return id;
     }

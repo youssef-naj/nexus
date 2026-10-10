@@ -33,6 +33,7 @@ public class DashboardService {
             Scope scope,
             Summary overall,
             Long awaitingReview,
+            Long assignedToMe,
             Summary mine,
             List<RecentEvent> recent) {}
 
@@ -59,6 +60,7 @@ public class DashboardService {
         Map<RequestStatus, Long> overall =
                 viewAll ? statistics.countByStatus(org.organizationId(), null) : mine;
         Long awaiting = reviewer ? statistics.countAwaitingReview(org.organizationId(), me) : null;
+        Long assigned = reviewer ? statistics.countAssignedOpenTo(org.organizationId(), me) : null;
         List<RecentEvent> recent =
                 statistics.recentEvents(org.organizationId(), viewAll ? null : me, RECENT_LIMIT);
 
@@ -66,6 +68,7 @@ public class DashboardService {
                 viewAll ? Scope.ORGANIZATION : Scope.MINE,
                 summary(overall),
                 awaiting,
+                assigned,
                 summary(mine),
                 recent);
     }

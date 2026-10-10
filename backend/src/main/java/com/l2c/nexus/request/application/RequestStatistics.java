@@ -1,6 +1,5 @@
 package com.l2c.nexus.request.application;
 
-import com.l2c.nexus.request.domain.RequestAction;
 import com.l2c.nexus.request.domain.RequestStatus;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -21,14 +20,16 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class RequestStatistics {
 
+    /** action is a workflow action or ASSIGN / UNASSIGN; targetName is set for the latter two. */
     public record RecentEvent(
             UUID id,
             UUID requestId,
             String reference,
             String title,
-            RequestAction action,
+            String action,
             RequestStatus toStatus,
             String actorName,
+            String targetName,
             Instant occurredAt) {}
 
     private record StatusCount(RequestStatus status, long count) {}
@@ -83,19 +84,34 @@ public class RequestStatistics {
                 .single();
     }
 
-    /** The newest workflow events, optionally only on requests created by one member. */
+    /** Submitted requests assigned to the given member. */
+    @Transactional(readOnly = true)
+    public long countAssignedOpenTo(UUID organizationId, UUID assigneeMembershipId) {
+        return jdbc.sql(
+                        "SELECT count(*) FROM service_requests WHERE organization_id = ?"
+                                + " AND assignee_membership_id = ? AND status = 'SUBMITTED'")
+                .params(organizationId, assigneeMembershipId)
+                .query(Long.class)
+                .single();
+    }
+
+    /** The newest history events, optionally only on requests created by one member. */
     @Transactional(readOnly = true)
     public List<RecentEvent> recentEvents(
             UUID organizationId, UUID onlyCreatedByMembershipId, int limit) {
         StringBuilder sql =
                 new StringBuilder(
                         "SELECT e.id, e.request_id, r.reference, r.title, e.action, e.to_status,"
-                                + " u.display_name, e.occurred_at FROM request_events e"
+                                + " au.display_name AS actor_name, tu.display_name AS target_name,"
+                                + " e.occurred_at FROM request_events e"
                                 + " JOIN service_requests r ON r.organization_id = e.organization_id"
                                 + " AND r.id = e.request_id"
-                                + " JOIN memberships m ON m.organization_id = e.organization_id"
-                                + " AND m.id = e.actor_membership_id"
-                                + " JOIN users u ON u.id = m.user_id"
+                                + " JOIN memberships am ON am.organization_id = e.organization_id"
+                                + " AND am.id = e.actor_membership_id"
+                                + " JOIN users au ON au.id = am.user_id"
+                                + " LEFT JOIN memberships tm ON tm.organization_id = e.organization_id"
+                                + " AND tm.id = e.target_membership_id"
+                                + " LEFT JOIN users tu ON tu.id = tm.user_id"
                                 + " WHERE e.organization_id = ?");
         List<Object> params = new ArrayList<>();
         params.add(organizationId);
@@ -114,9 +130,10 @@ public class RequestStatistics {
                                         rs.getObject("request_id", UUID.class),
                                         rs.getString("reference"),
                                         rs.getString("title"),
-                                        RequestAction.valueOf(rs.getString("action")),
+                                        rs.getString("action"),
                                         RequestStatus.valueOf(rs.getString("to_status")),
-                                        rs.getString("display_name"),
+                                        rs.getString("actor_name"),
+                                        rs.getString("target_name"),
                                         rs.getObject("occurred_at", OffsetDateTime.class)
                                                 .toInstant()))
                 .list();

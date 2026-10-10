@@ -10,8 +10,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * "editable" and "actions" tell the UI what THIS viewer may do now. They are hints computed by the
- * server; every action is authorized again when it is used.
+ * "editable", "actions" and "assignable" tell the UI what THIS viewer may do now. They are hints
+ * computed by the server; every action is authorized again when it is used.
  */
 public record RequestDetailResponse(
         UUID id,
@@ -31,10 +31,14 @@ public record RequestDetailResponse(
         Instant updatedAt,
         long version,
         boolean editable,
-        List<RequestAction> actions) {
+        List<RequestAction> actions,
+        boolean assignable) {
 
     static RequestDetailResponse from(
-            RequestDetail detail, UUID viewerMembershipId, List<RequestAction> actions) {
+            RequestDetail detail,
+            UUID viewerMembershipId,
+            List<RequestAction> actions,
+            boolean assignable) {
         boolean editable =
                 detail.createdByMembershipId().equals(viewerMembershipId)
                         && detail.status().isEditable();
@@ -56,6 +60,7 @@ public record RequestDetailResponse(
                 detail.updatedAt(),
                 detail.version(),
                 editable,
-                actions);
+                actions,
+                assignable);
     }
 }

@@ -30,6 +30,7 @@ import {
   useUnassignMember,
   useUpdateDepartment,
 } from "./queries"
+import { ScrollRegion } from "@/shared/components/ScrollRegion"
 
 export function DepartmentDetailPage() {
   const { departmentId = "" } = useParams()
@@ -188,45 +189,47 @@ export function DepartmentDetailPage() {
           <p className="text-sm text-muted-foreground">No members in this department yet.</p>
         )}
         {members.data && members.data.content.length > 0 && (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Added</TableHead>
-                <TableHead>
-                  <span className="sr-only">Actions</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {members.data.content.map((member) => (
-                <TableRow key={member.membershipId}>
-                  <TableCell className="font-medium">
-                    {member.displayName}
-                    {member.email && (
-                      <span className="ml-2 text-xs text-muted-foreground">{member.email}</span>
-                    )}
-                  </TableCell>
-                  <TableCell>{roleLabel(member.role)}</TableCell>
-                  <TableCell>{formatDate(member.assignedAt)}</TableCell>
-                  <TableCell className="text-right">
-                    {manage && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={unassign.isPending}
-                        aria-label={`Remove ${member.displayName} from department`}
-                        onClick={() => void run(() => unassign.mutateAsync(member.membershipId))}
-                      >
-                        Remove
-                      </Button>
-                    )}
-                  </TableCell>
+          <ScrollRegion label="Department members">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Added</TableHead>
+                  <TableHead>
+                    <span className="sr-only">Actions</span>
+                  </TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {members.data.content.map((member) => (
+                  <TableRow key={member.membershipId}>
+                    <TableCell className="font-medium">
+                      {member.displayName}
+                      {member.email && (
+                        <span className="ml-2 text-xs text-muted-foreground">{member.email}</span>
+                      )}
+                    </TableCell>
+                    <TableCell>{roleLabel(member.role)}</TableCell>
+                    <TableCell>{formatDate(member.assignedAt)}</TableCell>
+                    <TableCell className="text-right">
+                      {manage && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={unassign.isPending}
+                          aria-label={`Remove ${member.displayName} from department`}
+                          onClick={() => void run(() => unassign.mutateAsync(member.membershipId))}
+                        >
+                          Remove
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </ScrollRegion>
         )}
         {members.data && (
           <PaginationBar page={page} totalPages={members.data.totalPages} onPageChange={setPage} />

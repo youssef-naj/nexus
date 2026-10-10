@@ -30,7 +30,7 @@ flowchart LR
       DASH["dashboard [built]"]
     end
   end
-  DB[("PostgreSQL 17<br/>Flyway migrations V1-V11 [built]")]
+  DB[("PostgreSQL 17<br/>Flyway migrations V1-V12 [built]")]
   MAIL["Mailpit, dev email [built]"]
 
   B --> P --> SEC --> GATE --> API --> Modules
@@ -64,9 +64,10 @@ flowchart TD
   team --> identity
   team --> audit
   team --> department
+  team --> request
 ```
 
-Rules: arrows point at what a module may use; nothing depends on `team` or `dashboard`, and only `dashboard` depends on `request` (through its `RequestStatistics` service).
+Rules: arrows point at what a module may use; nothing depends on `dashboard`, and only `dashboard` and `team` depend on `request` (through `RequestStatistics`, `RequestAssignmentService`, and `RequestAssignmentService`).
 
 Rules: arrows point at what a module may use; nothing depends on `team`. `shared` depends on no feature. Modules reach each other only through public application services (`RequestNumberAllocator`, `RequestStatistics`, `DepartmentDirectory`, `UserDirectory`, `AuditService`). One documented exception: the member list is a read-only join over memberships and users (ADR-0022). Writes always go through the owning module. Architecture tests that enforce these rules are planned for Phase 8.
 
@@ -76,7 +77,7 @@ Rules: arrows point at what a module may use; nothing depends on `team`. `shared
 - **Database:** 9, Hibernate runs with `ddl-auto: validate`, `open-in-view` is disabled.
 - **Errors:** Problem Details (RFC 9457), including security-layer errors. Feature handlers are ordered before the global catch-all.
 - **Time:** UTC everywhere, `timestamptz` in the database, an injected `Clock` in code.
-- - **Concurrency:** optimistic locking (`@Version`) on mutable entities; one fixed lock order, **organization row first**, then the request or department row. The organization is locked exclusively for membership changes, department assignments and request-number allocation, and in shared mode for review decisions (so many decisions run in parallel but a role change waits for them). A shared lock on a department protects attaching it to a request; the request row is locked for transitions; atomic conditional updates protect single-use tokens and invitations.
+- **Concurrency:** optimistic locking (`@Version`) on mutable entities; one fixed lock order, **organization row first**, then the request or department row. The organization is locked exclusively for membership changes (which also clear the removed or demoted member's request assignments), department assignments and request-number allocation, and in shared mode for review decisions and request assignment (so many run in parallel but a role change or removal waits for them). A shared lock on a department protects attaching it to a request; the request row is locked for transitions and assignments; atomic conditional updates protect single-use tokens and invitations.
 - **Audit:** recorded in the business transaction through one service; see ADR-0017.
 - **Formatting:** Spotless with google-java-format (AOSP style), enforced in `mvn verify`.
 
@@ -96,6 +97,7 @@ Rules: arrows point at what a module may use; nothing depends on `team`. `shared
 - **Feature-oriented structure:** `src/app`, `src/features/<name>` (auth, organizations, members, departments, requests, audit, dashboard), `src/shared`, `src/components/ui`.
 - **Server state** with TanStack Query (everything for one organization is cached under `["organizations", orgId, ...]`, so logout clears it), **forms** with React Hook Form and Zod, **routing** with React Router. The organization is part of the route (`/orgs/:orgId/...`).
 - Shared UI and API helpers: a query-string builder, the page-envelope schema, common error wording, a pagination bar, text and textarea fields with accessible error messages, and a form-error mapper that places server field errors under their fields. Lists keep their filter state in component state; everything cached for an organization sits under one key prefix, so logout clears it.
+- Accessibility and layout: a root layout (used only by the real router) sets each page's title from its route and moves focus to the main region after navigating to another page; wide tables sit in labelled, keyboard-focusable scroll regions; the header and navigation wrap on narrow screens; a skip link jumps to the main content.
 - Permission-based controls are usability hints only. Authorization is enforced on the server.
 
 ## Quality gates
@@ -110,4 +112,4 @@ Rules: arrows point at what a module may use; nothing depends on `team`. `shared
 
 ## Decisions
 
-See [docs/decisions](decisions/README.md) for the ADRs (0001 to 0030): modular monolith, stack, session authentication, tenant isolation, disclosure policy, platform admin separation, authorization, errors and time, identifiers, workflow and concurrency, tokens, audit design and recording, frontend architecture, registration, login, rate limiting, organizations and account checks, the tenant gate, invitations, member administration, and the frontend routes and UI, departments, department assignments and service requests, and the departments and requests UI, and the workflow screens and audit viewer, and the dashboard
+See [docs/decisions](decisions/README.md) for the ADRs (0001 to 0031): modular monolith, stack, session authentication, tenant isolation, disclosure policy, platform admin separation, authorization, errors and time, identifiers, workflow and concurrency, tokens, audit design and recording, frontend architecture, registration, login, rate limiting, organizations and account checks, the tenant gate, invitations, member administration, and the frontend routes and UI, departments, department assignments and service requests, and the departments and requests UI, and the workflow screens and audit viewer, and the dashboard, and request assignment with the accessibility pass
