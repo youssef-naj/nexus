@@ -1,10 +1,10 @@
 package com.l2c.nexus.identity.api;
 
-import com.l2c.nexus.identity.application.AccountService;
 import com.l2c.nexus.identity.application.EmailVerificationService;
 import com.l2c.nexus.identity.application.RegisterUserCommand;
 import com.l2c.nexus.identity.application.RegistrationService;
-import com.l2c.nexus.identity.domain.User;
+import com.l2c.nexus.identity.application.UserDirectory;
+import com.l2c.nexus.identity.application.UserSummary;
 import com.l2c.nexus.identity.security.AuthenticatedUser;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -29,15 +29,15 @@ class AuthController {
 
     private final RegistrationService registration;
     private final EmailVerificationService verification;
-    private final AccountService accounts;
+    private final UserDirectory directory;
 
     AuthController(
             RegistrationService registration,
             EmailVerificationService verification,
-            AccountService accounts) {
+            UserDirectory directory) {
         this.registration = registration;
         this.verification = verification;
-        this.accounts = accounts;
+        this.directory = directory;
     }
 
     @PostMapping("/register")
@@ -64,7 +64,7 @@ class AuthController {
     @GetMapping("/me")
     CurrentUserResponse me(
             @AuthenticationPrincipal AuthenticatedUser principal, HttpServletRequest request) {
-        User user = accounts.findActiveUser(principal.id()).orElse(null);
+        UserSummary user = directory.findActiveById(principal.id()).orElse(null);
         if (user == null) {
             HttpSession session = request.getSession(false);
             if (session != null) {
@@ -72,6 +72,6 @@ class AuthController {
             }
             throw new InsufficientAuthenticationException("Session is no longer valid");
         }
-        return new CurrentUserResponse(user.getId(), user.getEmail(), user.getDisplayName());
+        return new CurrentUserResponse(user.id(), user.email(), user.displayName());
     }
 }

@@ -3,7 +3,6 @@ package com.l2c.nexus.department.persistence;
 import com.l2c.nexus.department.domain.Department;
 import com.l2c.nexus.department.domain.DepartmentSort;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
 import java.util.List;
 import java.util.Locale;
@@ -21,7 +20,11 @@ public class DepartmentSearch {
 
     public record Result(List<Department> items, long total) {}
 
-    @PersistenceContext private EntityManager entityManager;
+    private final EntityManager entityManager;
+
+    public DepartmentSearch(EntityManager entityManager) {
+        this.entityManager = entityManager;
+    }
 
     public Result search(UUID organizationId, Criteria criteria, int page, int size) {
         StringBuilder where = new StringBuilder("d.organizationId = :org");

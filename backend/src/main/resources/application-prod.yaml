@@ -1,0 +1,33 @@
+# Deployed environments: SPRING_PROFILES_ACTIVE=prod
+server:
+  servlet:
+    session:
+      cookie:
+        secure: true
+  # Trust X-Forwarded-* headers ONLY behind a reverse proxy you control that overwrites them
+  forward-headers-strategy: ${NEXUS_FORWARD_HEADERS:none}
+
+spring:
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_AUTH:true}
+          starttls:
+            enable: true
+
+nexus:
+  public-base-url: ${NEXUS_PUBLIC_BASE_URL}
+  mail:
+    from: ${NEXUS_MAIL_FROM}
+  security:
+    secure-cookies: true
+
+logging:
+  structured:
+    format:
+      console: ecs

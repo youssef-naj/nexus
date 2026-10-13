@@ -4,6 +4,8 @@ import com.l2c.nexus.identity.application.AccountService;
 import com.l2c.nexus.identity.application.AuthRateLimits;
 import com.l2c.nexus.shared.ratelimit.RateLimiter;
 import com.l2c.nexus.shared.security.ProblemJsonSecurityHandlers;
+import com.l2c.nexus.shared.security.RequestSizeLimitFilter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -13,12 +15,22 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfFilter;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy;
+import org.springframework.security.web.header.writers.StaticHeadersWriter;
 import org.springframework.security.web.savedrequest.NullRequestCache;
 
 @Configuration
 @EnableWebSecurity
 class SecurityConfig {
+
+    /** The API only serves JSON: nothing may load, frame or post anywhere (ADR-0032). */
+    private static final String API_CSP =
+            "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
+
+    private static final String PERMISSIONS_POLICY =
+            "camera=(), microphone=(), geolocation=(), payment=(), usb=()";
 
     @Bean
     SecurityFilterChain securityFilterChain(
@@ -29,13 +41,40 @@ class SecurityConfig {
             LoginThrottle loginThrottle,
             RateLimiter rateLimiter,
             AuthRateLimits rateLimits,
-            AccountService accountService)
+            AccountService accountService,
+            @Value("${nexus.security.secure-cookies:false}") boolean secureCookies,
+            @Value("${nexus.http.max-body-bytes:102400}") long maxBodyBytes)
             throws Exception {
+        // The CSRF cookie is readable by JavaScript on purpose, but it is SameSite=Lax, and Secure
+        // wherever the application is served over HTTPS (nexus.security.secure-cookies)
+        CookieCsrfTokenRepository csrfTokens = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        csrfTokens.setCookieCustomizer(cookie -> cookie.sameSite("Lax").secure(secureCookies));
+
         http
-                // Cookie-to-header CSRF tokens for the SPA (XSRF-TOKEN cookie, X-XSRF-TOKEN header)
-                .csrf(csrf -> csrf.spa())
+                // The SPA configuration first, then our repository: spa() would override one set
+                // before it
+                .csrf(csrf -> csrf.spa().csrfTokenRepository(csrfTokens))
+                .headers(
+                        headers ->
+                                headers.contentSecurityPolicy(csp -> csp.policyDirectives(API_CSP))
+                                        .referrerPolicy(
+                                                referrer ->
+                                                        referrer.policy(ReferrerPolicy.NO_REFERRER))
+                                        .addHeaderWriter(
+                                                new StaticHeadersWriter(
+                                                        "Permissions-Policy", PERMISSIONS_POLICY))
+                                        .addHeaderWriter(
+                                                new StaticHeadersWriter(
+                                                        "Cross-Origin-Opener-Policy",
+                                                        "same-origin"))
+                                        .addHeaderWriter(
+                                                new StaticHeadersWriter(
+                                                        "Cross-Origin-Resource-Policy",
+                                                        "same-origin")))
                 .authenticationProvider(authenticationProvider)
-                // First in the chain: abusive requests are rejected before any expensive work
+                // First in the chain: oversized and abusive requests are rejected before any
+                // expensive work (CSRF handling, password hashing)
+                .addFilterBefore(new RequestSizeLimitFilter(maxBodyBytes), CsrfFilter.class)
                 .addFilterBefore(
                         new AuthRateLimitFilter(loginThrottle, rateLimiter, rateLimits),
                         CsrfFilter.class)

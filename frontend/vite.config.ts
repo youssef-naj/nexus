@@ -10,6 +10,10 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    headers: {
+      "Referrer-Policy": "no-referrer",
+      "X-Content-Type-Options": "nosniff",
+    },
     // Same-origin API access in development (ADR-0003, ADR-0013)
     proxy: {
       "/api": "http://localhost:8080",

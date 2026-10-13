@@ -1,4 +1,4 @@
-package com.l2c.nexus.shared.system;
+package com.l2c.nexus.shared.system.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

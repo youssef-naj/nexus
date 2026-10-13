@@ -1,0 +1,4 @@
+[[IgnoredVulns]]
+id = "GHSA-vfj7-8cjw-p6xm"
+ignoreUntil = 2026-12-31
+reason = "braces 3.0.3 is a transitive dev-tool dependency (not shipped to users) and no fixed version is published yet. Re-check by this date."

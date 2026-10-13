@@ -29,10 +29,13 @@ spring:
 server:
   servlet:
     session:
+      tracking-modes: cookie       # never a session id in a URL
       cookie:
         http-only: true
         same-site: lax
         # secure: true is set in deployed environments (HTTPS), see the deployment phase
+  tomcat:
+    max-http-form-post-size: 64KB
 
 management:
   endpoints:
@@ -58,3 +61,14 @@ nexus:
     email-per-address: { limit: 3, window: 1h }
     invite-per-org: { limit: 20, window: 1h }
     request-create-per-member: { limit: 100, window: 1h }
+  security:
+    secure-cookies: false          # true in the "prod" profile
+  http:
+    max-body-bytes: 102400         # 100 KB
+
+# API documentation is published deliberately (deployment phase), not exposed by default
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

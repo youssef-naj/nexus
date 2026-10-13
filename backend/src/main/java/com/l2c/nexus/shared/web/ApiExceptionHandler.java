@@ -5,6 +5,7 @@ import com.l2c.nexus.shared.error.ForbiddenActionException;
 import com.l2c.nexus.shared.error.NotFoundException;
 import com.l2c.nexus.shared.error.ValidationFailedException;
 import com.l2c.nexus.shared.ratelimit.RateLimitExceededException;
+import com.l2c.nexus.shared.security.RequestBodyTooLargeException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -20,6 +21,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
@@ -122,6 +124,33 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         problem.setTitle("Validation failed");
         problem.setDetail("One or more fields are invalid.");
         problem.setProperty("errors", ex.getErrors());
+        return problem;
+    }
+
+    @ExceptionHandler(RequestBodyTooLargeException.class)
+    ResponseEntity<ProblemDetail> handleTooLarge(RequestBodyTooLargeException ex) {
+        return ResponseEntity.status(413).body(tooLarge());
+    }
+
+    @Override
+    protected ResponseEntity<Object> handleHttpMessageNotReadable(
+            HttpMessageNotReadableException ex,
+            HttpHeaders headers,
+            HttpStatusCode status,
+            WebRequest request) {
+        for (Throwable cause = ex; cause != null; cause = cause.getCause()) {
+            if (cause instanceof RequestBodyTooLargeException) {
+                return handleExceptionInternal(
+                        ex, tooLarge(), headers, HttpStatusCode.valueOf(413), request);
+            }
+        }
+        return super.handleHttpMessageNotReadable(ex, headers, status, request);
+    }
+
+    private static ProblemDetail tooLarge() {
+        ProblemDetail problem = ProblemDetail.forStatus(413);
+        problem.setTitle("Payload too large");
+        problem.setDetail("The request body is too large.");
         return problem;
     }
 }
