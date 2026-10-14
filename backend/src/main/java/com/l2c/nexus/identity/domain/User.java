@@ -41,6 +41,10 @@ public class User {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "platform_role", length = 30)
+    private PlatformRole platformRole;
+
     @Version private long version;
 
     /** Required by JPA. Use {@link #register} to create users. */
@@ -100,6 +104,21 @@ public class User {
             return false;
         }
         emailVerifiedAt = now;
+        updatedAt = now;
+        return true;
+    }
+
+    public PlatformRole getPlatformRole() {
+        return platformRole;
+    }
+
+    /** Returns true if the role actually changed. */
+    public boolean setPlatformAdmin(boolean admin, Instant now) {
+        PlatformRole target = admin ? PlatformRole.PLATFORM_ADMIN : null;
+        if (platformRole == target) {
+            return false;
+        }
+        platformRole = target;
         updatedAt = now;
         return true;
     }

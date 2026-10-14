@@ -27,7 +27,13 @@ public enum AuditEventType {
     REQUEST_REJECTED("reference"),
     REQUEST_CHANGES_REQUESTED("reference"),
     REQUEST_ASSIGNED("reference", "assigneeMembershipId"),
-    REQUEST_UNASSIGNED("reference", "assigneeMembershipId");
+    REQUEST_UNASSIGNED("reference", "assigneeMembershipId"),
+    ORGANIZATION_SUSPENDED("reason"),
+    ORGANIZATION_REACTIVATED("reason"),
+    PLATFORM_ORGANIZATION_SUSPENDED("reason"),
+    PLATFORM_ORGANIZATION_REACTIVATED("reason"),
+    PLATFORM_ADMIN_GRANTED(),
+    PLATFORM_ADMIN_REVOKED();
 
     private final Set<String> allowedMetadataKeys;
 
@@ -37,5 +43,13 @@ public enum AuditEventType {
 
     public Set<String> allowedMetadataKeys() {
         return allowedMetadataKeys;
+    }
+
+    /**
+     * Platform events concern the platform itself, not a tenant: they live outside every
+     * organization.
+     */
+    public boolean platformScoped() {
+        return name().startsWith("PLATFORM_");
     }
 }

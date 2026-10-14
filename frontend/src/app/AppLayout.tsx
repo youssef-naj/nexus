@@ -22,6 +22,11 @@ export function AppLayout() {
               Nexus
             </Link>
             <OrgSwitcher />
+            {user?.platformAdmin && (
+              <Link to="/platform" className="text-sm underline-offset-4 hover:underline">
+                Platform
+              </Link>
+            )}
           </div>
           <div className="flex items-center gap-3">
             {user && <span className="text-sm text-muted-foreground">{user.displayName}</span>}

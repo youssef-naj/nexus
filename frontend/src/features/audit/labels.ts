@@ -23,9 +23,33 @@ export const EVENT_LABELS: Record<string, string> = {
   REQUEST_CHANGES_REQUESTED: "Changes requested",
   REQUEST_ASSIGNED: "Request assigned",
   REQUEST_UNASSIGNED: "Assignee removed",
+  ORGANIZATION_SUSPENDED: "Organization suspended",
+  ORGANIZATION_REACTIVATED: "Organization reactivated",
+  PLATFORM_ORGANIZATION_SUSPENDED: "Organization suspended",
+  PLATFORM_ORGANIZATION_REACTIVATED: "Organization reactivated",
+  PLATFORM_ADMIN_GRANTED: "Platform administrator added",
+  PLATFORM_ADMIN_REVOKED: "Platform administrator removed",
 }
 
-export const EVENT_TYPES = Object.keys(EVENT_LABELS)
+/** Platform events live in the platform audit view, not in an organization's. */
+export const EVENT_TYPES = Object.keys(EVENT_LABELS).filter((type) => !type.startsWith("PLATFORM_"))
+export const PLATFORM_EVENT_TYPES = Object.keys(EVENT_LABELS).filter((type) =>
+  type.startsWith("PLATFORM_"),
+)
+
+export const REASON_LABELS: Record<string, string> = {
+  POLICY_VIOLATION: "Policy violation",
+  SECURITY_CONCERN: "Security concern",
+  NON_PAYMENT: "Non-payment",
+  CUSTOMER_REQUEST: "Customer request",
+  ISSUE_RESOLVED: "Issue resolved",
+  SUSPENDED_IN_ERROR: "Suspended in error",
+  OTHER: "Other",
+}
+
+export function reasonLabel(code: string): string {
+  return REASON_LABELS[code] ?? code
+}
 
 export function eventLabel(eventType: string): string {
   const known = EVENT_LABELS[eventType]
@@ -53,5 +77,6 @@ export function describeMetadata(metadata: Record<string, string>): string {
   } else if (metadata["role"]) {
     parts.push(`Role: ${role(metadata["role"])}`)
   }
+  if (metadata["reason"]) parts.push(`Reason: ${reasonLabel(metadata["reason"])}`)
   return parts.join(" · ")
 }

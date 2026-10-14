@@ -11,6 +11,7 @@ import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.sli
 
 import com.l2c.nexus.department.persistence.DepartmentRepository;
 import com.l2c.nexus.membership.persistence.MembershipRepository;
+import com.l2c.nexus.organization.application.OrganizationService;
 import com.l2c.nexus.request.persistence.ServiceRequestRepository;
 import com.l2c.nexus.team.persistence.InvitationRepository;
 import com.tngtech.archunit.base.DescribedPredicate;
@@ -56,6 +57,8 @@ class ArchitectureTest {
                     Set.of("organization", "membership", "audit", "shared"),
                     "request",
                     Set.of("organization", "membership", "department", "audit", "shared"),
+                    "platform",
+                    Set.of("organization", "identity", "audit", "shared"),
                     "team",
                     Set.of(
                             "organization",
@@ -197,6 +200,18 @@ class ArchitectureTest {
                 .or(assignableTo(InvitationRepository.class))
                 .or(assignableTo(ServiceRequestRepository.class));
     }
+
+    /** Only the platform module may suspend or reactivate organizations (ADR-0006, ADR-0032). */
+    @ArchTest
+    static final ArchRule onlyThePlatformModuleChangesOrganizationStatus =
+            noClasses()
+                    .that()
+                    .resideOutsideOfPackages(BASE + ".platform..", BASE + ".organization..")
+                    .should()
+                    .callMethodWhere(
+                            target(nameMatching("changeStatus"))
+                                    .and(target(owner(assignableTo(OrganizationService.class)))))
+                    .because("tenant code must never change an organization's status");
 
     private static ArchCondition<JavaClass> onlyBeUsedByTheirOwnModule() {
         return new ArchCondition<>("only be used by their own module") {

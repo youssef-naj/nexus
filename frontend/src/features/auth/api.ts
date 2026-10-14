@@ -6,6 +6,8 @@ const currentUserSchema = z.object({
   id: z.string(),
   email: z.string(),
   displayName: z.string(),
+  /** Only decides whether the Platform link is shown; the server checks the role on every request. */
+  platformAdmin: z.boolean().default(false),
 })
 export type CurrentUser = z.infer<typeof currentUserSchema>
 

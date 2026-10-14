@@ -26,6 +26,8 @@ nexus:
     from: ${NEXUS_MAIL_FROM}
   security:
     secure-cookies: true
+  platform:
+    admin-emails: ${NEXUS_PLATFORM_ADMIN_EMAILS:}
 
 logging:
   structured:

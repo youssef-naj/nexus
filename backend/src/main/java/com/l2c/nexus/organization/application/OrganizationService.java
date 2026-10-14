@@ -8,10 +8,14 @@ import com.l2c.nexus.membership.application.MembershipService;
 import com.l2c.nexus.membership.application.MembershipView;
 import com.l2c.nexus.membership.domain.OrgRole;
 import com.l2c.nexus.organization.domain.Organization;
+import com.l2c.nexus.organization.domain.OrganizationStatus;
 import com.l2c.nexus.organization.persistence.OrganizationRepository;
+import com.l2c.nexus.shared.error.ConflictException;
 import com.l2c.nexus.shared.error.NotFoundException;
+import com.l2c.nexus.shared.error.ValidationFailedException;
 import java.security.SecureRandom;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.List;
@@ -34,18 +38,21 @@ public class OrganizationService {
     private final SlugGenerator slugs;
     private final Clock clock;
     private final SecureRandom random = new SecureRandom();
+    private final OrganizationCatalog catalog;
 
     public OrganizationService(
             OrganizationRepository organizations,
             MembershipService memberships,
             AuditService audit,
             SlugGenerator slugs,
-            Clock clock) {
+            Clock clock,
+            OrganizationCatalog catalog) {
         this.organizations = organizations;
         this.memberships = memberships;
         this.audit = audit;
         this.slugs = slugs;
         this.clock = clock;
+        this.catalog = catalog;
     }
 
     /** Creates the organization, makes the creator its Owner, and audits it: all or nothing. */
@@ -148,5 +155,51 @@ public class OrganizationService {
     @Transactional(propagation = Propagation.MANDATORY)
     public void lockSharedForActions(UUID organizationId) {
         organizations.lockSharedById(organizationId).orElseThrow(NotFoundException::new);
+    }
+
+    /**
+     * Suspends or reactivates an organization. Only the platform module calls this (enforced by an
+     * architecture test). It takes the exclusive organization lock, so it waits for decisions in
+     * flight and every other operation sees the new status afterwards. Writes the tenant-visible
+     * audit record: the organization's Owners see that it happened and why, as "System".
+     */
+    @Transactional
+    public StatusChange changeStatus(
+            UUID organizationId,
+            OrganizationStatus target,
+            long expectedVersion,
+            StatusChangeReason reason) {
+        if (!reason.allowedFor(target)) {
+            throw new ValidationFailedException("reason", "is not valid for this action");
+        }
+        Organization organization =
+                organizations.lockById(organizationId).orElseThrow(NotFoundException::new);
+        if (organization.getVersion() != expectedVersion) {
+            throw new ConflictException(
+                    "STALE_VERSION",
+                    "This organization changed since you opened it. Reload it and try again.");
+        }
+        if (organization.getStatus() == target) {
+            return new StatusChange(catalog.find(organizationId).orElseThrow(), false);
+        }
+
+        Instant now = clock.instant();
+        if (target == OrganizationStatus.SUSPENDED) {
+            organization.suspend(now);
+        } else {
+            organization.reactivate(now);
+        }
+        organizations.saveAndFlush(organization);
+        audit.record(
+                AuditEvent.of(
+                                target == OrganizationStatus.SUSPENDED
+                                        ? AuditEventType.ORGANIZATION_SUSPENDED
+                                        : AuditEventType.ORGANIZATION_REACTIVATED,
+                                null,
+                                AuditTargetType.ORGANIZATION,
+                                organizationId)
+                        .inOrganization(organizationId)
+                        .withMetadata(Map.of("reason", reason.name())));
+        return new StatusChange(catalog.find(organizationId).orElseThrow(), true);
     }
 }

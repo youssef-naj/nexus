@@ -72,6 +72,7 @@ class AuthController {
             }
             throw new InsufficientAuthenticationException("Session is no longer valid");
         }
-        return new CurrentUserResponse(user.id(), user.email(), user.displayName());
+        return new CurrentUserResponse(
+                user.id(), user.email(), user.displayName(), user.platformAdmin());
     }
 }

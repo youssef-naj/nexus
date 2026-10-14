@@ -4,3 +4,8 @@ spring:
   mail:
     host: localhost
     port: 1025
+nexus:
+  platform:
+    # Comma-separated. These verified accounts become platform administrators at startup;
+    # anyone else holding the role loses it. Set it in .env (never commit real addresses).
+    admin-emails: ${NEXUS_PLATFORM_ADMIN_EMAILS:}

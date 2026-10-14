@@ -65,4 +65,18 @@ public class Organization {
     public OrganizationStatus getStatus() {
         return status;
     }
+
+    public void suspend(Instant now) {
+        this.status = OrganizationStatus.SUSPENDED;
+        this.updatedAt = now;
+    }
+
+    public void reactivate(Instant now) {
+        this.status = OrganizationStatus.ACTIVE;
+        this.updatedAt = now;
+    }
+
+    public long getVersion() {
+        return version;
+    }
 }

@@ -1,5 +1,6 @@
 package com.l2c.nexus.identity.application;
 
+import com.l2c.nexus.identity.domain.PlatformRole;
 import com.l2c.nexus.identity.domain.User;
 import com.l2c.nexus.identity.domain.UserStatus;
 import com.l2c.nexus.identity.persistence.UserRepository;
@@ -28,12 +29,30 @@ public class UserDirectory {
     /** The account, only if it is active and verified. */
     @Transactional(readOnly = true)
     public Optional<UserSummary> findActiveById(UUID id) {
-        return users.findById(id)
-                .filter(user -> user.getStatus() == UserStatus.ACTIVE && user.isEmailVerified())
-                .map(UserDirectory::summary);
+        return users.findById(id).filter(UserDirectory::usable).map(UserDirectory::summary);
     }
 
-    private static UserSummary summary(User user) {
-        return new UserSummary(user.getId(), user.getEmail(), user.getDisplayName());
+    /**
+     * Read from the database on every call, never from the session, so removing the role (or
+     * disabling the account) takes effect on the very next request.
+     */
+    @Transactional(readOnly = true)
+    public boolean isPlatformAdmin(UUID id) {
+        return users.findById(id)
+                .filter(UserDirectory::usable)
+                .map(user -> user.getPlatformRole() == PlatformRole.PLATFORM_ADMIN)
+                .orElse(false);
+    }
+
+    static boolean usable(User user) {
+        return user.getStatus() == UserStatus.ACTIVE && user.isEmailVerified();
+    }
+
+    static UserSummary summary(User user) {
+        return new UserSummary(
+                user.getId(),
+                user.getEmail(),
+                user.getDisplayName(),
+                user.getPlatformRole() == PlatformRole.PLATFORM_ADMIN);
     }
 }

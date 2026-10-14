@@ -18,6 +18,9 @@ import { OrganizationsPage } from "@/features/organizations/OrganizationsPage"
 import { RequestDetailPage } from "@/features/requests/RequestDetailPage"
 import { RequestFormPage } from "@/features/requests/RequestFormPage"
 import { RequestsPage } from "@/features/requests/RequestsPage"
+import { PlatformAuditPage } from "@/features/platform/PlatformAuditPage"
+import { PlatformLayout } from "@/features/platform/PlatformLayout"
+import { PlatformOrganizationsPage } from "@/features/platform/PlatformOrganizationsPage"
 
 /** Each route's `handle.title` becomes the page title (see RootLayout). */
 export const router = createBrowserRouter([
@@ -47,6 +50,22 @@ export const router = createBrowserRouter([
                 path: "/invitations/accept",
                 element: <AcceptInvitationPage />,
                 handle: { title: "Accept invitation" },
+              },
+              {
+                path: "/platform",
+                element: <PlatformLayout />,
+                children: [
+                  {
+                    index: true,
+                    element: <PlatformOrganizationsPage />,
+                    handle: { title: "Platform organizations" },
+                  },
+                  {
+                    path: "audit",
+                    element: <PlatformAuditPage />,
+                    handle: { title: "Platform audit" },
+                  },
+                ],
               },
               {
                 path: "/orgs/:orgId",
