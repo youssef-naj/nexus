@@ -21,7 +21,7 @@ jobs:
 
       # Fails the job when a known vulnerability affects a dependency. Maven dependencies are
       # resolved transitively from the pom; npm uses the lockfile.
-      - name: Scan backend and frontend dependencies
+      - name: Scan backend, frontend and end-to-end dependencies
         run: >
           docker run --rm -v "$PWD:/src:ro" ghcr.io/google/osv-scanner:v2.6.0
-          scan source -L /src/backend/pom.xml -L /src/frontend/package-lock.json
+          scan source -L /src/backend/pom.xml -L /src/frontend/package-lock.json -L /src/e2e/package-lock.json
