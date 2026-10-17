@@ -4,6 +4,12 @@ spring:
   mail:
     host: localhost
     port: 1025
+    properties:
+      mail:
+        smtp:
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
 nexus:
   platform:
     # Comma-separated. These verified accounts become platform administrators at startup;

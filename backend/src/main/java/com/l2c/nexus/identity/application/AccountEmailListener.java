@@ -1,5 +1,6 @@
 package com.l2c.nexus.identity.application;
 
+import com.l2c.nexus.shared.logging.SafeExceptionFormatter;
 import com.l2c.nexus.shared.ratelimit.RateLimitDecision;
 import com.l2c.nexus.shared.ratelimit.RateLimiter;
 import java.util.Locale;
@@ -50,7 +51,10 @@ public class AccountEmailListener {
             String link = publicBaseUrl + "/verify-email?token=" + token;
             emails.sendVerificationEmail(event.email(), event.displayName(), link);
         } catch (RuntimeException e) {
-            log.error("Could not send verification email for user {}", event.userId(), e);
+            log.error(
+                    "Could not send verification email for user {}: {}",
+                    event.userId(),
+                    SafeExceptionFormatter.format(e));
         }
     }
 
@@ -63,7 +67,9 @@ public class AccountEmailListener {
         try {
             emails.sendAlreadyRegisteredEmail(event.email());
         } catch (RuntimeException e) {
-            log.error("Could not send the already-registered notice", e);
+            log.error(
+                    "Could not send the already-registered notice: {}",
+                    SafeExceptionFormatter.format(e));
         }
     }
 

@@ -1,5 +1,6 @@
 package com.l2c.nexus.team.application;
 
+import com.l2c.nexus.shared.logging.SafeExceptionFormatter;
 import com.l2c.nexus.shared.ratelimit.RateLimitDecision;
 import com.l2c.nexus.shared.ratelimit.RateLimiter;
 import java.util.Locale;
@@ -56,7 +57,7 @@ public class InvitationEmailListener {
                     event.role().name(),
                     publicBaseUrl + "/invitations/accept?token=" + event.rawToken());
         } catch (RuntimeException e) {
-            log.error("Could not send an invitation email", e);
+            log.error("Could not send an invitation email: {}", SafeExceptionFormatter.format(e));
         }
     }
 }

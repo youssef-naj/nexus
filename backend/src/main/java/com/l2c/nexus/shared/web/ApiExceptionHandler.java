@@ -11,8 +11,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.dao.OptimisticLockingFailureException;
@@ -33,13 +31,12 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 
 /**
  * Turns every error into an RFC 9457 Problem Details body. The base class already maps Spring's
- * standard exceptions (malformed JSON, wrong method, and so on) to ProblemDetail.
+ * standard exceptions (malformed JSON, wrong method, and so on) to ProblemDetail. Feature handlers
+ * run first; this one, with the catch-all, runs last.
  */
 @RestControllerAdvice
-@Order(Ordered.LOWEST_PRECEDENCE) // the catch-all must be consulted last
+@Order(Ordered.LOWEST_PRECEDENCE)
 class ApiExceptionHandler extends ResponseEntityExceptionHandler {
-
-    private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
 
     @Override
     protected ResponseEntity<Object> handleMethodArgumentNotValid(
@@ -76,29 +73,6 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return problem;
     }
 
-    @ExceptionHandler(RateLimitExceededException.class)
-    ResponseEntity<ProblemDetail> handleRateLimit(RateLimitExceededException ex) {
-        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.TOO_MANY_REQUESTS);
-        problem.setTitle("Too many requests");
-        problem.setDetail("Too many attempts. Please try again later.");
-        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
-                .header(HttpHeaders.RETRY_AFTER, Long.toString(ex.retryAfterSeconds()))
-                .body(problem);
-    }
-
-    @ExceptionHandler(Exception.class)
-    ProblemDetail handleUnexpected(Exception ex) throws Exception {
-        // Security exceptions must reach Spring Security's own handlers (401/403).
-        if (ex instanceof AccessDeniedException || ex instanceof AuthenticationException) {
-            throw ex;
-        }
-        log.error("Unhandled exception", ex);
-        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
-        problem.setTitle("Internal server error");
-        problem.setDetail("An unexpected error occurred.");
-        return problem;
-    }
-
     @ExceptionHandler(ForbiddenActionException.class)
     ProblemDetail handleForbiddenAction(ForbiddenActionException ex) {
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.FORBIDDEN);
@@ -127,9 +101,19 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return problem;
     }
 
+    @ExceptionHandler(RateLimitExceededException.class)
+    ResponseEntity<ProblemDetail> handleRateLimit(RateLimitExceededException ex) {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.TOO_MANY_REQUESTS);
+        problem.setTitle("Too many requests");
+        problem.setDetail("Too many attempts. Please try again later.");
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(HttpHeaders.RETRY_AFTER, Long.toString(ex.retryAfterSeconds()))
+                .body(problem);
+    }
+
     @ExceptionHandler(RequestBodyTooLargeException.class)
     ResponseEntity<ProblemDetail> handleTooLarge(RequestBodyTooLargeException ex) {
-        return ResponseEntity.status(413).body(tooLarge());
+        return ResponseEntity.status(413).body(problemOf(Failures.TOO_LARGE, null));
     }
 
     @Override
@@ -138,19 +122,42 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
             HttpHeaders headers,
             HttpStatusCode status,
             WebRequest request) {
+        // A body cut off by the size limit can surface wrapped by the JSON reader
         for (Throwable cause = ex; cause != null; cause = cause.getCause()) {
             if (cause instanceof RequestBodyTooLargeException) {
                 return handleExceptionInternal(
-                        ex, tooLarge(), headers, HttpStatusCode.valueOf(413), request);
+                        ex,
+                        problemOf(Failures.TOO_LARGE, null),
+                        headers,
+                        HttpStatusCode.valueOf(413),
+                        request);
             }
         }
         return super.handleHttpMessageNotReadable(ex, headers, status, request);
     }
 
-    private static ProblemDetail tooLarge() {
-        ProblemDetail problem = ProblemDetail.forStatus(413);
-        problem.setTitle("Payload too large");
-        problem.setDetail("The request body is too large.");
+    @ExceptionHandler(Exception.class)
+    ResponseEntity<ProblemDetail> handleUnexpected(Exception ex) throws Exception {
+        // Security exceptions must reach Spring Security's own handlers (401/403).
+        if (ex instanceof AccessDeniedException || ex instanceof AuthenticationException) {
+            throw ex;
+        }
+        Failures.Failure failure = Failures.classify(ex);
+        String incident = Failures.report(failure, ex);
+        ResponseEntity.BodyBuilder response = ResponseEntity.status(failure.status());
+        if (failure.retryAfterSeconds() != null) {
+            response.header(HttpHeaders.RETRY_AFTER, Long.toString(failure.retryAfterSeconds()));
+        }
+        return response.body(problemOf(failure, incident));
+    }
+
+    private static ProblemDetail problemOf(Failures.Failure failure, String incident) {
+        ProblemDetail problem = ProblemDetail.forStatus(failure.status());
+        problem.setTitle(failure.title());
+        problem.setDetail(failure.detail());
+        if (failure.status() >= 500 && incident != null) {
+            problem.setProperty("incidentId", incident);
+        }
         return problem;
     }
 }

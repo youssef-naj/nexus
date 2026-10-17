@@ -12,6 +12,9 @@ export function commonErrorMessage(error: unknown): string | null {
       ? `Too many attempts. Try again in ${formatWait(error.retryAfterSeconds)}.`
       : "Too many attempts. Please try again later."
   }
+  if (error.status === 503) {
+    return "The service is temporarily unavailable. Please try again in a moment."
+  }
   if (error.status >= 500) return "Something went wrong on our side. Please try again."
   return null
 }

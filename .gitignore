@@ -33,3 +33,8 @@ build/
 .vscode/
 
 .env
+
+*.log
+
+.env.demo
+.env.prod

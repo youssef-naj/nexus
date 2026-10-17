@@ -1,10 +1,13 @@
-# Deployed environments: SPRING_PROFILES_ACTIVE=prod
+# Deployed environments: SPRING_PROFILES_ACTIVE=prod. Everything environment-specific comes from
+# environment variables (see .env.prod.example); nothing secret lives in this file.
 server:
   servlet:
     session:
       cookie:
-        secure: true
-  # Trust X-Forwarded-* headers ONLY behind a reverse proxy you control that overwrites them
+        # Secure unless explicitly switched off (only the plain-HTTP demo does that)
+        secure: ${NEXUS_SECURE_COOKIES:true}
+  # Trust X-Forwarded-* headers ONLY behind a reverse proxy you control that overwrites them.
+  # "native" lets Tomcat take the client address from a proxy on a private network.
   forward-headers-strategy: ${NEXUS_FORWARD_HEADERS:none}
 
 spring:
@@ -19,13 +22,16 @@ spring:
           auth: ${MAIL_AUTH:true}
           starttls:
             enable: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
 
 nexus:
   public-base-url: ${NEXUS_PUBLIC_BASE_URL}
   mail:
     from: ${NEXUS_MAIL_FROM}
   security:
-    secure-cookies: true
+    secure-cookies: ${NEXUS_SECURE_COOKIES:true}
   platform:
     admin-emails: ${NEXUS_PLATFORM_ADMIN_EMAILS:}
 

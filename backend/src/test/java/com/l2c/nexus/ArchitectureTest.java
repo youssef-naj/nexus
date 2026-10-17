@@ -4,6 +4,7 @@ import static com.tngtech.archunit.core.domain.JavaCall.Predicates.target;
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.assignableTo;
 import static com.tngtech.archunit.core.domain.properties.HasName.Predicates.nameMatching;
 import static com.tngtech.archunit.core.domain.properties.HasOwner.Predicates.With.owner;
+import static com.tngtech.archunit.core.domain.properties.HasParameterTypes.Predicates.rawParameterTypes;
 import static com.tngtech.archunit.lang.SimpleConditionEvent.violated;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
@@ -237,4 +238,19 @@ class ArchitectureTest {
         int dot = rest.indexOf('.');
         return dot < 0 ? rest : rest.substring(0, dot);
     }
+
+    /**
+     * Exception messages can carry personal data (a duplicate-key error contains the email), so
+     * exceptions are described with SafeExceptionFormatter instead of being handed to the logger
+     * (ADR-0033). This catches the logger.error(String, Throwable) form.
+     */
+    @ArchTest
+    static final ArchRule exceptionsAreNeverHandedToLoggersDirectly =
+            noClasses()
+                    .should()
+                    .callMethodWhere(
+                            target(owner(assignableTo(org.slf4j.Logger.class)))
+                                    .and(target(rawParameterTypes(String.class, Throwable.class))))
+                    .because(
+                            "exception messages can contain personal data; use SafeExceptionFormatter");
 }

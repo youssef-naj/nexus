@@ -5,6 +5,7 @@ import com.l2c.nexus.identity.application.AuthRateLimits;
 import com.l2c.nexus.shared.ratelimit.RateLimiter;
 import com.l2c.nexus.shared.security.ProblemJsonSecurityHandlers;
 import com.l2c.nexus.shared.security.RequestSizeLimitFilter;
+import com.l2c.nexus.shared.web.FailureResponseFilter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,6 +18,7 @@ import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfFilter;
+import org.springframework.security.web.header.HeaderWriterFilter;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy;
 import org.springframework.security.web.header.writers.StaticHeadersWriter;
 import org.springframework.security.web.savedrequest.NullRequestCache;
@@ -72,6 +74,9 @@ class SecurityConfig {
                                                         "Cross-Origin-Resource-Policy",
                                                         "same-origin")))
                 .authenticationProvider(authenticationProvider)
+                // Right after the headers filter: failures from anything below (session loading,
+                // authentication, a database outage) become safe Problem Details WITH the headers
+                .addFilterAfter(new FailureResponseFilter(), HeaderWriterFilter.class)
                 // First in the chain: oversized and abusive requests are rejected before any
                 // expensive work (CSRF handling, password hashing)
                 .addFilterBefore(new RequestSizeLimitFilter(maxBodyBytes), CsrfFilter.class)

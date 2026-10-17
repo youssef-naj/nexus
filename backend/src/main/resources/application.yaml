@@ -5,6 +5,12 @@ spring:
     url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:nexus}
     username: ${POSTGRES_USER:nexus}
     password: ${POSTGRES_PASSWORD:}
+    hikari:
+      connection-timeout: 5000     # fail fast when the database is unreachable
+      maximum-pool-size: 10
+  jdbc:
+    template:
+      query-timeout: 15s
   jpa:
     open-in-view: false
     hibernate:
@@ -19,12 +25,15 @@ spring:
     timeout: 2h            # idle timeout
     jdbc:
       initialize-schema: never   # Flyway owns the schema (ADR-0009)
+      query-timeout: 15s
   task:
     execution:
       pool:
         core-size: 2
         max-size: 4
         queue-capacity: 100
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
 
 server:
   servlet:
@@ -36,6 +45,7 @@ server:
         # secure: true is set in deployed environments (HTTPS), see the deployment phase
   tomcat:
     max-http-form-post-size: 64KB
+  shutdown: graceful
 
 management:
   endpoints:
@@ -48,6 +58,9 @@ management:
       show-details: never
       probes:
         enabled: true
+      group:
+        readiness:
+          include: readinessState,db   # not ready to take traffic while the database is down
 
 nexus:
   public-base-url: http://localhost:5173   # override in deployed environments
@@ -72,3 +85,14 @@ springdoc:
     enabled: false
   swagger-ui:
     enabled: false
+
+logging:
+  level:
+    # Hibernate prints SQL error details (for example the duplicate email of a unique violation).
+    # Our own handlers log a safe description instead (ADR-0033). Hibernate 7 renamed its logger,
+    # so both names are listed; the quotes matter (an unquoted OFF is read as a boolean).
+    org.hibernate.orm.jdbc.error: "OFF"
+    org.hibernate.engine.jdbc.spi.SqlExceptionHelper: "OFF"
+    org.springframework.web.servlet.mvc.support.DefaultHandlerExceptionResolver: ERROR
+    # One full stack trace per probe during an outage; the endpoint already reports DOWN
+    org.springframework.boot.health.contributor.AbstractHealthIndicator: ERROR

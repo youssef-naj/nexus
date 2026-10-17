@@ -1,0 +1,37 @@
+name: Deployment check
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  stack:
+    name: Build images, start the stack, smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      COMPOSE: docker compose --env-file .env.demo -f compose.prod.yaml -f compose.demo.yaml
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Prepare the demo configuration
+        run: cp .env.demo.example .env.demo
+
+      - name: Build the images and start the stack
+        run: $COMPOSE up -d --build --wait --wait-timeout 300
+
+      - name: Smoke test
+        run: bash scripts/smoke.sh
+
+      - name: Show the logs when something failed
+        if: failure()
+        run: $COMPOSE logs --no-color --tail=200
+
+      - name: Stop the stack
+        if: always()
+        run: $COMPOSE down -v

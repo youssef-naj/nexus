@@ -1,0 +1,16 @@
+# A local demo: adds Mailpit so the emails (verification links, invitations) can be read in a
+# browser at http://localhost:8026. Use together with .env.demo (see .env.demo.example).
+services:
+  mailpit:
+    image: axllent/mailpit:v1.27
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${NEXUS_MAILPIT_PORT:-8026}:8025"
+    security_opt:
+      - no-new-privileges:true
+    networks: [edge]
+
+  backend:
+    depends_on:
+      mailpit:
+        condition: service_started
