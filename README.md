@@ -1,214 +1,139 @@
 # Nexus
 
-A multi-tenant **Business Operations SaaS** platform. Independent organizations share one application and manage their members, departments, internal service requests, approval workflows and audit history, with **strict tenant isolation**: a user of Organization A can never access Organization B's private data.
+A multi-tenant business operations platform. Organizations manage their people, departments and internal service requests through a reviewed approval workflow, with strict tenant isolation, a complete audit trail, and a platform layer that can suspend an organization but never sees what is inside it.
 
-> **Status: Phase 7 complete (dashboard, request assignment and accessibility pass).** You can register, verify your email, create organizations, invite people, manage members and roles, organize members into departments, create and edit service requests, submit, assign and review them with a full history, read the audit log as Owner or Admin, and use a dashboard with your queues and recent activity, all with tenant isolation enforced and tested. Security hardening, deployment and the demonstration phase are **not done yet**. See [Status and roadmap](#status-and-roadmap) and [docs/status.md](docs/status.md).
+> **Status: complete MVP (phases 0 to 9).** Everything described here is built, tested and documented. See [docs/status.md](docs/status.md) for what is proven and what is deliberately left out.
 
-## What exists today
-
-- Registration with email verification (emails readable locally in Mailpit), login, logout, server-side sessions, CSRF protection, rate limiting.
-- Organizations: create (you become Owner), list, switch between them (the organization is part of the URL), leave.
-- A server-side **tenant gate**: outsiders get a `404` identical to "does not exist". Role-based permissions per membership.
-- Invitations by email (hashed single-use tokens, accepted only by the invited verified account), member list, role changes, removal, with no role escalation, no self-management, and an organization always keeps an Owner.
-- An approval workflow with screens: submit, approve, reject and request changes (comments required where they matter), a per-request history, a rule that nobody reviews their own request, and protection against two reviewers deciding at once.
-- An audit log screen for Owners and Admins: who did what, newest first, filterable by event type and date, with no personal data or review comments in it.
-- A dashboard for every member: requests by status, what awaits your review, your own requests and recent activity. Employees see their own figures; reviewers see the organization's. Every number links to the matching filtered request list and always agrees with it.
-- Request assignment: a reviewer assigns a submitted request to a reviewer (or to themselves), recorded in the history and the audit log; reviewers see "Assigned to you" on the dashboard and as a list filter. Assignment is advisory, never a lock, and clears itself when the assignee is removed or can no longer review.
-- Accessibility and responsive layout: page titles, focus moved to the content after navigation, a skip link, labeled scrollable tables, and wrapping navigation on narrow screens.
-- Departments (create, search, update, deactivate, assign and remove members) and internal service requests (reference numbers such as `REQ-000042`, drafts, editing by the creator, filtering, search, pagination), with screens and API.- An append-only audit log written in the same transaction as each change.
-- React + TypeScript frontend for all of the above, with loading, empty, validation and error states.
-- Integration tests against a real PostgreSQL (Testcontainers), a reusable cross-tenant isolation test battery, frontend component tests, formatting and lint checks, GitHub Actions CI and Dependabot.
-- Architecture decision records (ADRs) for the main design choices.
-
-## Planned features (MVP)
-
-Security hardening (headers, architecture tests, dependency scanning, load and failure testing), then deployment, a demonstration with seed data and screenshots, and end-to-end tests. See [docs/architecture.md](docs/architecture.md) and [docs/status.md](docs/status.md).
-
-## Tech stack
-
-| Area | Choice |
+| | |
 |---|---|
-| Backend | Java 21, Spring Boot 4.1, Spring Security, Spring Session (JDBC), Spring Data JPA (Hibernate), Flyway, Actuator, springdoc OpenAPI |
-| Database | PostgreSQL 17 |
-| Local email | Mailpit |
-| Frontend | React, TypeScript (strict), Vite, React Router, TanStack Query, React Hook Form, Zod, Tailwind CSS, shadcn/ui |
-| Testing | JUnit 5, Testcontainers, Vitest, Testing Library |
-| Quality | Spotless (google-java-format, AOSP style), ESLint, Prettier, GitHub Actions, Dependabot |
-| Local infrastructure | Docker Compose |
+| ![Dashboard of a reviewer](docs/screenshots/03-dashboard-reviewer.png) | ![A request with its history](docs/screenshots/06-request-history.png) |
+| ![The audit log](docs/screenshots/09-audit.png) | ![The dashboard on a phone](docs/screenshots/12-mobile-dashboard.png) |
 
-Architecture is a **modular monolith**, not microservices (see [ADR-0001](docs/decisions/0001-modular-monolith.md)).
+More in [docs/screenshots](docs/screenshots).
 
-## Prerequisites
+## What it does
 
-- **JDK 21** (for example Eclipse Temurin), with `JAVA_HOME` set
-- **Node.js 24 LTS** (20.19+ or 22.12+ also work) and npm
-- **Docker Desktop** (with WSL 2 on Windows), running
-- **Git**
+- **Accounts:** registration with email verification, sign-in and sign-out, server-side sessions with CSRF protection.
+- **Organizations:** create several, switch between them, invite people by email, four roles (Owner, Admin, Manager, Employee), role changes and removal with last-owner protection.
+- **Departments:** create, search, deactivate, assign members.
+- **Service requests:** reference numbers per organization (`REQ-000042`), drafts, editing by the creator, filters, search and pagination. Employees see only their own requests; reviewers see the organization's.
+- **Approval workflow:** submit, approve, reject or request changes (comments required where they matter), assignment to a reviewer, a full history per request, nobody reviews their own request, and safe handling of two reviewers acting at once.
+- **Audit log:** who did what, filterable, for Owners and Admins, with no personal data or review comments in it.
+- **Dashboard:** requests by status, what awaits your review, what is assigned to you, recent activity; every number agrees with the list behind it.
+- **Platform administration:** operators declared in configuration can suspend and reactivate an organization, with audited reasons, and see organization metadata only.
+- **Operations:** security headers, size limits, safe logging, graceful behavior during outages, production container images, and a one-command demo.
 
-Maven is not needed separately. The Maven Wrapper is included.
+## Try it
+
+You need Docker and Node 20 or newer.
 
 ```powershell
-java -version
-node -v
-docker --version
-docker compose version
+function dc { docker compose --env-file .env.demo -f compose.prod.yaml -f compose.demo.yaml @args }
+Copy-Item .env.demo.example .env.demo
+dc up -d --build --wait          # builds the images and starts the stack (first build takes a few minutes)
+node scripts/seed-demo.mjs       # creates two organizations, nine people and twelve requests
+dc restart backend               # applies the platform operator role
 ```
 
-## Quick start (Windows PowerShell)
+(On Linux or macOS: `alias dc='docker compose --env-file .env.demo -f compose.prod.yaml -f compose.demo.yaml'` and `cp .env.demo.example .env.demo`.)
+
+Open **http://localhost:8088** and sign in with the demo password `Demo-passphrase-2026`:
+
+| Person | Role in Atlas Logistics |
+|---|---|
+| `amira.benali@demo.example` | Owner (also Manager in Northwind Studio) |
+| `daniel.okafor@demo.example` | Admin |
+| `priya.raman@demo.example`, `lucas.meyer@demo.example` | Manager |
+| `sofia.rossi@demo.example`, `tomas.alvarez@demo.example`, `hana.kobayashi@demo.example` | Employee |
+| `nora.lindqvist@demo.example` | Owner of Northwind Studio |
+| `platform@demo.example` | Platform operator (open the Platform link) |
+
+Emails (verification links, invitations) appear in the demo mail viewer at **http://localhost:8026**. A guided tour is in [docs/demo.md](docs/demo.md). The demo runs on plain HTTP with a shared password: it is **not** a deployment.
+
+## Develop
 
 ```powershell
-git clone https://github.com/youssef-naj/nexus.git
-cd nexus
+Copy-Item .env.example .env       # development settings (git-ignored)
+docker compose up -d              # PostgreSQL and Mailpit for development
 
-# 1. Local configuration (never commit .env)
-Copy-Item .env.example .env
-notepad .env          # set POSTGRES_PASSWORD to any local value
-
-# 2. Database and local mail server
-docker compose up -d
-docker compose ps     # postgres should report "healthy"
-
-# 3. Backend (new terminal)
 cd backend
-.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"
+.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"   # http://localhost:8080
 
-# 4. Frontend (new terminal)
-cd frontend
-npm ci
-npm run dev
+cd ..\frontend
+npm install
+npm run dev                       # http://localhost:5173, proxies /api to the backend
 ```
 
-Open <http://localhost:5173>. You land on the sign-in page.
+Development mail is caught by Mailpit at http://localhost:8025.
 
-<details>
-<summary>macOS / Linux equivalents</summary>
-
-```bash
-cp .env.example .env
-docker compose up -d
-(cd backend && ./mvnw spring-boot:run -Dspring-boot.run.profiles=local)
-(cd frontend && npm ci && npm run dev)
-```
-
-</details>
-
-### Try the main flow
-
-1. On <http://localhost:5173>, choose **Create one** and register (password of at least 12 characters).
-2. Open Mailpit at <http://localhost:8025>, open the verification email, click the link and **Confirm email**.
-3. Sign in, then **Create an organization**. You become its Owner.
-4. Open **Members** and invite a second email address as Manager. Register and verify that second account in a private window.
-5. In Mailpit, open the invitation email, follow the link while signed in as the invited account and **Accept invitation**.
-6. As Owner, change that member's role or remove them; as the member, notice which controls you no longer see.
-7. Open **Departments**, create one, open it and add yourself and the invited member to it.
-8. Open **Requests**, create a request (choose the department and a due date), then edit it from its detail page. As the invited Employee you see only your own requests; as Manager you see everyone's.
-9. As the creator, open a request and **Submit for review**. As the invited Manager, open it: **Approve**, **Reject** or **Request changes** (a comment is required for the last two). The History on the request page shows every step. You cannot review your own request.
-10. As Owner, open **Audit** to see who did what, and filter by event type or date.
-11. Open the organization's home page: the dashboard shows requests by status, what is waiting for your review, and recent activity. Click any count to open the matching list.
-12. On a submitted request, as a reviewer, use **Assignment** to assign it to a colleague or to yourself. The colleague sees it under **Assigned to you** on their dashboard.
-
-There are no pre-created demo accounts yet; demo data is planned.
-
-### Useful URLs
-
-| URL | Purpose |
+| Task | Command |
 |---|---|
-| `http://localhost:5173` | Frontend |
-| `http://localhost:8025` | Mailpit (read local emails) |
-| `http://localhost:8080/api/system/ping` | Public ping |
-| `http://localhost:8080/api/actuator/health` | Health check |
+| Backend tests, architecture rules and formatting check (needs Docker) | `cd backend; .\mvnw.cmd verify` |
+| Format backend code | `.\mvnw.cmd spotless:apply` |
+| Frontend checks | `cd frontend; npm run format; npm run typecheck; npm run lint; npm run test; npm run build` |
+| End-to-end and accessibility tests (needs the seeded demo running) | `cd e2e; npm install; npx playwright install chromium; npx playwright test` |
+| Smoke test of the running demo | `bash scripts/smoke.sh` |
+| Regenerate the screenshots | `cd e2e; npm run capture` |
+| Check the documentation | `node scripts/check-docs.mjs` |
 
-Every other API endpoint requires authentication.
+A real deployment is described in [docs/deployment.md](docs/deployment.md).
 
-### Configuration
+## How it is built
 
-Configuration comes from environment variables. Locally they are read from `.env` when the `local` Spring profile is active.
-
-| Variable | Default | Meaning |
-|---|---|---|
-| `POSTGRES_DB` | `nexus` | Database name |
-| `POSTGRES_USER` | `nexus` | Database user |
-| `POSTGRES_PASSWORD` | none (required) | Database password |
-| `POSTGRES_PORT` | `5432` | Host port for PostgreSQL |
-| `POSTGRES_HOST` | `localhost` | Database host used by the backend |
-
-No credentials are committed. `.env.example` contains placeholders only.
-
-## Tests and checks
-
-```powershell
-# Backend: unit + integration tests (needs Docker) and formatting check
-cd backend
-.\mvnw.cmd verify
-.\mvnw.cmd spotless:apply     # auto-format before committing
-
-# Frontend
-cd frontend
-npm run format:check
-npm run lint
-npm run typecheck
-npm run test
-npm run build
-```
-
-CI runs the same commands for every push and pull request. The backend suite includes the cross-tenant isolation battery and a route-inventory test that fails if an organization-scoped route is reachable by a non-member.
-
-## Troubleshooting
-
-| Problem | Fix |
-|---|---|
-| `JAVA_HOME environment variable is not defined correctly` | Point `JAVA_HOME` at the JDK folder that contains `bin\javac.exe`, then open a new terminal. |
-| Docker error: port 5432 not available, or Flyway says the schema is non-empty without a history table | Another PostgreSQL is using port 5432 (often a locally installed one), so the app talked to the wrong database. Set `POSTGRES_PORT=5433` in `.env`, run `docker compose up -d`, and restart the backend. |
-| `Port 8080 was already in use` | An older copy of the backend is still running. Stop it from the IDE or terminal before starting another. |
-| `password authentication failed` | The database volume was created with another password. Run `docker compose down -v` (deletes local data), then `docker compose up -d`. |
-| `Failed to configure a DataSource` when running from IntelliJ | The Maven project was not imported (right-click `backend/pom.xml` and choose Add as Maven Project), or the working directory is not `backend`. |
-| Sign-in returns `403` | The CSRF cookie is missing. Reload the page and retry. |
-| `429 Too many attempts` | Rate limit reached. Wait for the time shown, or restart the backend to clear the in-memory counters. |
-
-## Project structure
+- **Backend:** Java 21 and Spring Boot 4 (see `backend/pom.xml` for the exact version), PostgreSQL 17 with Flyway migrations, Spring Security with server-side sessions, a modular monolith whose boundaries are enforced by architecture tests.
+- **Frontend:** React and TypeScript with Vite, Tailwind CSS and shadcn/ui, TanStack Query, React Hook Form and Zod.
+- **Tenant isolation in layers:** the organization is in the URL and the gate checks membership; repositories are scoped by organization; composite foreign keys make the database itself refuse cross-tenant references; other tenants' data answers `404`, never `403`.
+- **Quality gates in CI:** tests against real PostgreSQL, architecture rules, a dependency vulnerability scan, a build of the deployable stack with a smoke test and browser tests including an accessibility scan, and a documentation check.
 
 ```
 nexus/
-├─ backend/     Spring Boot application (package com.l2c.nexus)
-│               shared, identity, audit, organization, membership, team, department, request
-├─ frontend/    React + TypeScript application
-├─ docs/        Architecture, data model, security, status, decision records
-├─ infra/       Reserved for deployment assets
-├─ .github/     CI workflow and Dependabot configuration
-├─ compose.yaml Local PostgreSQL and Mailpit
-└─ .env.example Configuration template
+├── backend/             Spring Boot application, Flyway migrations, tests
+│   └── src/main/java/com/l2c/nexus/
+│       shared, identity, audit, organization, membership, team,
+│       department, request, dashboard, platform
+├── frontend/            React SPA, nginx configuration, Dockerfile
+├── e2e/                 Playwright end-to-end and accessibility tests, screenshot capture
+├── scripts/             smoke test, demo seed, documentation check
+├── docs/                architecture, security, data model, guides, decision records
+├── compose.yaml         development services (PostgreSQL, Mailpit)
+├── compose.prod.yaml    the deployable stack
+├── compose.demo.yaml    demo additions (a mail viewer)
+└── .github/workflows/   CI, security scan, deployment check, docs check
 ```
 
 ## Documentation
 
-- [Architecture](docs/architecture.md)
-- [Data model](docs/data-model.md)
-- [Security](docs/security.md)
-- [MVP status against the acceptance criteria](docs/status.md)
-- [Architecture decision records](docs/decisions/README.md)
+| Document | Contents |
+|---|---|
+| [docs/architecture.md](docs/architecture.md) | Modules, request pipeline, tenant isolation, data, errors, frontend, deployment |
+| [docs/security.md](docs/security.md) | Threat model, what is built, known limitations |
+| [docs/data-model.md](docs/data-model.md) | Tables, constraints, indexes |
+| [docs/api-routes.md](docs/api-routes.md) | Every route and who may call it (generated from the code) |
+| [docs/deployment.md](docs/deployment.md) | Running it for real, backups, updates |
+| [docs/demo.md](docs/demo.md) | The seeded demo and a guided tour |
+| [docs/testing.md](docs/testing.md) | The test layers and how to run them |
+| [docs/status.md](docs/status.md) | What is done, how it is proven, what remains |
+| [docs/decisions](docs/decisions/README.md) | 36 architecture decision records |
 
-## Status and roadmap
+## Known limitations
+
+Account recovery (password reset, email change, multi-factor authentication) is not built; requests cannot be withdrawn or cancelled; rate limits live in memory so only one instance is supported; backups, image scanning and log aggregation are left to the operator; accessibility has automated checks but no screen-reader or user testing. The full list is in [docs/status.md](docs/status.md) and [docs/security.md](docs/security.md). Nothing here has had an external security review.
+
+## Roadmap
 
 | Phase | Scope | Status |
 |---|---|---|
-| 0 | Requirements and architecture | Done |
-| 1 | Development foundation, CI, first vertical slice | Done |
+| 0 | Requirements and architecture decisions | Done |
+| 1 | Foundation: skeleton, CI, local environment | Done |
 | 2 | Identity and authentication | Done |
 | 3 | Organizations and tenant isolation | Done |
 | 4 | Memberships, invitations, roles | Done |
 | 5 | Departments and service requests | Done |
 | 6 | Approval workflow and audit history | Done |
-| 7 | React dashboard and user experience | Done |
-| 8 | Security hardening and testing | Next |
-| 9 | Deployment, documentation, demonstration | Planned |
-
-## Known limitations
-
-- Requests cannot be withdrawn or cancelled; no platform administration; organization settings are not editable; no password reset.
-- No demo accounts, screenshots or deployment guide yet.
-- See [docs/security.md](docs/security.md) for the full, honest list of remaining security work.
-- Not production-ready. Nothing here has been security-reviewed or deployed.
+| 7 | Dashboard, assignment, accessibility | Done |
+| 8 | Security hardening, platform administration, failure behavior | Done |
+| 9 | Deployment, demonstration, end-to-end tests, documentation | Done |
 
 ## License
 
-[MIT](LICENSE)
+MIT, see [LICENSE](LICENSE).

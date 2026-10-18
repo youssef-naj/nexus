@@ -19,3 +19,5 @@ mvnw text eol=lf
 Dockerfile text eol=lf
 
 *.png binary
+
+docs/api-routes.md text eol=lf

@@ -166,6 +166,8 @@ erDiagram
 
 **Assignment events:** an ASSIGN or UNASSIGN event names the member concerned in `target_membership_id`; a check constraint (`ck_request_events_target_matches_action`) requires a target exactly for those two actions and forbids one on workflow transitions. Clearing an assignee because the member was removed or demoted is not a history event: it is a consequence of an audited member change.
 
+**Platform role and platform audit rows:** `users.platform_role` marks the few accounts that hold the platform role. It is read on every platform request and is only ever changed by the startup synchronizer, never by an API. Audit rows for platform-level events (an organization suspended by an administrator, an administrator granted or revoked) have `organization_id` NULL and an event type starting with `PLATFORM_`; they are visible only in the platform audit view, and the organization audit view never returns rows without an organization.
+
 **Invariants in the database, not only in code:** unique membership per user and organization; valid roles and statuses; slug format; at most one pending invitation per (organization, email) through a partial unique index; an invitation's decision time is set exactly when it is no longer pending.
 
 ## Constraints and indexes

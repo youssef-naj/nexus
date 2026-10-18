@@ -25,6 +25,8 @@ Short records of the significant decisions made for Nexus. Each ADR states the c
 | [0019](0019-tenant-gate-and-permission-policy.md) | Tenant gate and permission policy | Accepted |
 | [0020](0020-organization-in-the-frontend-route.md) | Organization in the frontend route | Accepted |
 | [0021](0021-invitations-and-the-team-module.md) | Invitations and the team module | Accepted |
+| [0022](0022-member-administration.md) | Member administration | Accepted |
+| [0023](0023-members-and-invitations-ui.md) | Members and invitations UI | Accepted |
 | [0024](0024-departments.md) | Departments | Accepted |
 | [0025](0025-department-assignments.md) | Department assignments | Accepted |
 | [0026](0026-service-requests.md) | Service requests | Accepted |
@@ -33,6 +35,10 @@ Short records of the significant decisions made for Nexus. Each ADR states the c
 | [0029](0029-workflow-screens-and-audit-viewer.md) | Workflow screens and the audit viewer | Accepted |
 | [0030](0030-dashboard.md) | Dashboard | Accepted |
 | [0031](0031-request-assignment-and-accessibility.md) | Request assignment and the accessibility pass | Accepted |
-
+| [0032](0032-security-hardening-and-platform-administration.md) | Security hardening and platform administration | Accepted |
+| [0033](0033-logging-and-failure-behavior.md) | Logging policy and failure behavior | Accepted |
+| [0034](0034-deployment.md) | Deployment | Accepted |
+| [0035](0035-demonstration-data.md) | Demonstration data | Accepted |
+| [0036](0036-end-to-end-and-accessibility-testing.md) | End-to-end and accessibility testing | Accepted |
 
 Use [0000-template.md](0000-template.md) for new records.

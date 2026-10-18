@@ -7,11 +7,19 @@ This document describes what the code does today, not what we hope it does. Deci
 
 | Threat | Mitigation | Status |
 |---|---|---|
-| Cross-tenant data access (IDOR) | Organization in the URL path, membership gate before any controller, organization-scoped queries, composite foreign keys, a shared isolation test battery and a route-inventory test (ADR-0004, ADR-0019) | [built] for organizations, members, invitations, departments, department assignments and service requests; every new endpoint must reuse the harness |
+| Cross-tenant data access (IDOR) | Organization in the URL path, membership gate before any controller, organization-scoped queries, composite foreign keys, a shared isolation test battery and a route-inventory test (ADR-0004, ADR-0019) | [built] for every tenant endpoint: organizations, members, invitations, departments, department assignments, requests, transitions, assignment, history, reviewers, dashboard and audit; every new endpoint must reuse the harness |
 | Role escalation | One role-grant policy used by invitations and member changes; nobody changes their own role; an organization always keeps an Owner (ADR-0007, ADR-0022) | [built] |
 | Unauthorized or self-approval of requests | Review needs REQUEST_REVIEW and is refused for the request's own creator; decisions carry the version the reviewer saw; transitions are validated against one table and serialized by locks (ADR-0028) | [built] |
 | Dashboard figures revealing requests a member cannot see | Figures are computed with the same visibility rule as the request list (employees only their own requests); a test compares every number with the matching list; the "awaiting review" figure and its list filter are restricted to reviewers | [built] |
 | Assignment used to probe members or organizations, or to dodge review | The assignee must be an active reviewer of the same organization and not the creator, and every invalid target returns the same generic `400`; assignment is advisory, so it cannot lock a request or exclude other reviewers; assignees who lose reviewer rights lose open assignments (ADR-0031) | [built] |
+| Oversized or abusive request bodies | Bodies are limited to 100 KB (64 KB for forms) and refused with `413` before parsing or hashing; chunked bodies are counted as they are read; the reverse proxy limits API bodies to 128 KB (ADR-0032) | [built] |
+| Clickjacking, content injection and referrer leaks | Strict response headers on the API (CSP `default-src 'none'`, `frame-ancestors 'none'`, `no-referrer`); the SPA is served with a CSP allowing scripts from its own origin only; user text is rendered as text (ADR-0032, ADR-0034) | [built] |
+| Compromised or over-reaching platform account | Platform administrators exist only in configuration, see organization metadata only, act through audited reason-coded actions, and their role is checked in the database on every request (ADR-0032) | [built] |
+| Sensitive data in logs and error responses | Logs never carry addresses, passwords, tokens or request contents; exceptions are logged by class and SQLSTATE only; clients get a generic message and an incident reference; enforced by tests and an architecture rule (ADR-0033) | [built] |
+| Known-vulnerable dependencies | OSV-Scanner on every push and weekly across Maven and npm lockfiles; no known-vulnerable runtime dependency may ship; exceptions are dated and expire (ADR-0032) | [built] |
+| Exposed internals in a deployment | Backend and database publish no ports; actuator is not reachable through the proxy; Swagger/OpenAPI are off; containers are non-root, read-only, capabilities dropped; secure cookies by default (ADR-0034) | [built] |
+| Forged client addresses defeating per-IP limits | The proxy overwrites the forwarded address and trusts forwarded headers only from private networks (ADR-0034) | [built] |
+| An outage turned into a sign-out or an information leak | A database outage returns `503` with `Retry-After` (never `401`); readiness depends on the database, liveness does not; the SPA keeps the session it has (ADR-0033) | [built] |
 | Lost updates and races between administrators | Per-organization row lock, caller re-check under the lock, per-member version (409), optimistic locking backstop (ADR-0022) | [built] |
 | Password guessing and credential stuffing | bcrypt, per-IP and per-account rate limits, generic errors (ADR-0015, ADR-0016) | [built] |
 | Account and organization enumeration | Identical responses for registration, login, invitation and organization lookups; equalized timing (ADR-0005, ADR-0014, ADR-0015) | [built] |
@@ -85,7 +93,7 @@ Supporting measures:
   - `fk_invitations_inviter`: an invitation's inviter must be a member of the **same** organization.
   - `fk_dm_department` and `fk_dm_membership` on `department_memberships`: a member of one organization cannot be assigned to a department of another, in either direction.
     Every later tenant table (requests and their history) follows the same pattern.
-- Tests: a reusable fixture of two organizations and seven users, a standard isolation battery (`assertIsolated`) applied to every tenant endpoint (organizations, members, invitations, departments, department assignments, requests), and an inventory test that fails if any `/api/orgs/{id}/...` route is reachable by a non-member. Schema tests also insert cross-tenant rows directly with SQL and assert that the foreign keys reject them. Tests also use foreign ids: an id that belongs to another organization (a member, invitation, department or request) is "not found" through every path.
+- Tests: a reusable fixture of two organizations and seven users, a standard isolation battery (`assertIsolated`) applied to every tenant endpoint (organizations, members, invitations, departments, assignments, requests, transitions, assignment, history, reviewers, dashboard, audit), and an inventory test that fails if any `/api/orgs/{id}/...` or `/api/platform/...` route is reachable by someone who should not reach it. Schema tests insert cross-tenant rows directly with SQL and assert that the foreign keys reject them. Foreign ids (a member, invitation, department or request of another organization) are "not found" through every path. End-to-end tests repeat the key rules through the browser, including a person who belongs to two organizations.
 
 ## Authorization [built]
 
@@ -159,9 +167,10 @@ Rules beyond the matrix (ADR-0007, ADR-0022):
 
 - Events recorded in the **same transaction** as the change (the service refuses to run outside one), so a change and its record commit or roll back together.
 - Each event type has an **allow-list** of metadata keys; unknown keys, null values and long values are rejected. Emails, tokens and passwords cannot reach the log.
-- Events today: user email verified; organization created; invitation created, revoked, accepted and rejected; member role changed, removed and left; department created, updated (old and new name), deactivated and reactivated; member added to and removed from a department (membership id only); request submitted, approved, rejected and changes requested (reference number only); request assigned and assignee removed (reference number and the assignee's membership id). Drafts are private working state and are not audited; review comments are never audited (they are in the request history).- The table is append-only (triggers reject UPDATE, DELETE and TRUNCATE) and has no foreign keys, so history outlives what it describes.
+- Events today: user email verified; organization created, suspended and reactivated (reason code only, shown as "System"); invitation created, revoked, accepted and rejected; member role changed, removed and left; department created, updated (old and new name), deactivated and reactivated; member added to and removed from a department (membership id only); request submitted, approved, rejected and changes requested (reference number only); request assigned and assignee removed (reference number and the assignee's membership id). Platform-level events (organization suspended or reactivated by an administrator, platform administrator granted or revoked) belong to no organization and are visible only in the platform audit view. Drafts are private working state and are not audited; review comments are never audited (they are in the request history).
 - **Viewing:** Owners and Admins (AUDIT_VIEW) can read their organization's log, newest first, paginated and filterable by event type and date range, through `GET /api/orgs/{orgId}/audit` and the Audit screen. The query is always scoped by organization, so events without an organization (platform-level) never appear there. The API returns random identifiers for actor and target; the screen shows only names, labels and allow-listed metadata. Email addresses and review comments are not in the log.
-- **Not built yet:** platform-level audit viewing (with platform administration), export, text search and filtering by actor, and retention tooling.
+- **Platform view:** platform administrators read the platform-level events through `GET /api/platform/audit` and the Platform audit screen; it shows only `PLATFORM_*` events that belong to no organization, never what people did inside tenants.
+- **Not built yet:** export, text search, filtering by actor, and retention tooling.
 
 ## Error handling [built]
 
@@ -172,24 +181,66 @@ All errors are Problem Details (RFC 9457, `application/problem+json`), including
 - Configuration comes from environment variables; locally they are read from the git-ignored `.env` under the `local` profile. `.env.example` contains placeholders only.
 - Compose binds PostgreSQL and Mailpit to `127.0.0.1`.
 
-## Known limitations and remaining security work
+## Known limitations
 
-Honest list, in rough priority order:
+These are known and deliberate. Each is tracked in [status.md](status.md).
 
-1. **Tenant isolation is proven for what exists** (organizations, members, invitations, departments, assignments, requests). Approvals and the dashboard must each pass the same harness when they are built.
-2. **No platform administration yet.** An organization can only be suspended through the database; the platform endpoints (metadata only, audited) are planned.
-3. **`Secure` cookie flag** must be enabled for the session cookie in every HTTPS deployment (Phase 9 checklist). The CSRF cookie gets no explicit `SameSite` attribute yet (browsers treat it as `Lax`).
-4. **Missing response headers:** a `Referrer-Policy` is needed because invitation and verification tokens appear in page URLs; a Content-Security-Policy and a full header review are part of Phase 8.
-5. **Rate limiter is in memory:** counters are per instance and reset on restart. Several instances need a shared store (ADR-0016).
-6. **Session lifetime:** only an idle timeout, no absolute lifetime and no "sign out everywhere". A removed member's old sessions stay valid but the gate denies tenant access immediately.
-7. **No password reset, password change, MFA, breached-password check or CAPTCHA.**
-8. **Emails are fire-and-forget:** no retry or outbox. Inviting again or registering again sends a fresh link.
-9. **Audit protection relies on database triggers;** a database owner or superuser can remove them. A restricted runtime database role is a Phase 9 task, and the local Docker user is a superuser.
-10. **Distributed attacks** from many IPs against one account are not stopped by per-IP rules.
-11. **Logging policy** (what may appear in logs, including addresses inside third-party error messages) is not formalized yet.
-12. **OpenAPI exposure:** springdoc endpoints exist but are reachable only after authentication; the per-environment policy is undecided.
-13. **No row-level security** yet; planned as defense in depth (Phase 8). **No Maven vulnerability scan** in CI yet.
-14. **Service requests are incomplete:** no way to withdraw or cancel a request, and drafts cannot be deleted. There is no organization setting to allow self-approval (it is always refused). The request history has no pagination (capped at 500 events). Creators cannot change a request's reference number or creator, and there is no history of draft edits.
-15. **Audit viewer scope:** date filters use UTC calendar days; there is no export or actor filter; the log shows only events recorded since each feature was built (earlier activity before auditing existed has no entries).
-16. **Assignment limits:** the reviewer picker is capped at 100 members; assignments cleared because a member was removed or demoted leave no history event (the audited member change explains them); decided requests keep their old assignee even if that member later leaves.
-Nothing here has had an external security review. This project should not be treated as production-ready.
+1. **Tenant isolation is proven for what exists** (organizations, members, invitations, departments, assignments, requests, transitions, history, dashboard, audit, platform). Anything new must pass the same harness.
+2. **Rate limits are in memory:** they apply per running instance and reset on restart, so the application supports a single instance only.
+3. **Account features not built:** password reset, email change, multi-factor authentication, account deletion and data export.
+4. **Sessions:** server-side (JDBC) with the standard timeout; there is no "sign out everywhere" screen.
+5. **Email is best-effort:** sent after commit, not retried, no bounce handling. A full mail queue drops surplus emails with a warning.
+6. **Requests:** no withdraw, cancel or delete of drafts; no organization setting to allow self-approval (it is always refused); history is capped at 500 events per request; no attachments; no history of draft edits.
+7. **Assignment:** the reviewer picker lists at most 100 members; assignments cleared because a member was removed or demoted leave no history event (the audited member change explains them); decided requests keep their old assignee even if that member later leaves.
+8. **Audit:** date filters use UTC days; no export, actor filter or retention tooling; only events recorded since each feature was built exist.
+9. **Platform administration:** the administrator list is configuration, so changing it (revocation too) needs a restart; no multi-factor authentication for administrators; no separate rate limit on platform actions; reasons are codes, never free text.
+10. **Web security:** the SPA's `style-src` still allows inline styles; HSTS and TLS are the operator's responsibility; the trusted private network ranges for client addresses are a deployment assumption.
+11. **Operations:** no automated database backups, no image vulnerability scanning, no log aggregation or alerting, incident ids are not searchable from the UI, JPA repository queries have no global timeout.
+12. **Dependencies:** `frontend/osv-scanner.toml` holds dated exceptions for dev-only findings with no published fix; they expire and must be reviewed. Check that `backend/pom.xml` uses a stable Spring Boot release before a real deployment (the project may be on a milestone, adopted to obtain fixed versions of Tomcat and Jackson).
+13. **Testing:** automated accessibility checks cover only part of the problems; there is no screen-reader or user testing, one browser engine, and no load or penetration testing.
+
+Nothing here has had an external security review.
+
+## HTTP hardening [built]
+
+- **Headers on every API response, errors and failures included:** CSP `default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'`, `Referrer-Policy: no-referrer`, `Permissions-Policy`, `Cross-Origin-Opener-Policy` and `Cross-Origin-Resource-Policy` (`same-origin`), `nosniff`, `X-Frame-Options: DENY`, no caching. HSTS is sent by the TLS layer, never over plain HTTP. No `Server` header is revealed.
+- **Cookies:** the CSRF cookie is readable by JavaScript on purpose and is `SameSite=Lax` (and `Secure` over HTTPS); the session cookie is `HttpOnly`, `SameSite=Lax` and `Secure` in deployments, from one switch that defaults to secure. Session ids never appear in URLs.
+- **Size limits:** 100 KB bodies, 64 KB forms, checked first in the filter chain; `413` as Problem Details.
+- **API documentation endpoints are off.** The route reference is generated from the code ([api-routes.md](api-routes.md)).
+- **The SPA** is served by nginx with a CSP that allows scripts from its own origin only (no inline code, no `eval`). Known trade-off: `style-src` still allows inline styles.
+
+## Platform administration [built]
+
+- **Who:** platform administrators are listed in configuration and synchronized at startup; only verified, active accounts qualify; everyone else loses the role. No API grants it. Grants and revocations are audited without an actor or personal data.
+- **Checked on every request** in the database (never cached in the session). Unauthenticated callers get `401`; everyone else, organization owners included, gets a `404` identical to a tenant route they do not belong to.
+- **Metadata only:** organization name, slug, status, creation date, active member count. No member names or emails, requests, departments or comments. The platform role grants no tenant permission; a test proves it with an administrator who is also an ordinary member.
+- **Actions:** suspend and reactivate, each with a reason from a fixed list (no free text), the version the administrator saw, the exclusive organization lock, idempotent. A suspended organization answers members with `403 ORGANIZATION_SUSPENDED`; invitations to it cannot be accepted.
+- **Audit:** a platform-level record (administrator, organization, reason) visible only in the platform audit view, and a tenant-level record ("System", reason) visible to the organization's Owners and Admins. The platform audit view lists only `PLATFORM_*` events that belong to no organization.
+
+## Logging and failure behavior [built]
+
+- **Logs never contain** email addresses, passwords, tokens or request contents. Flow tests run with debug logging on and search everything logged for the values they used, including a real database constraint violation.
+- **Exceptions are logged by class, SQLSTATE and top frames, never by message**; an architecture rule forbids handing a throwable to a logger; Hibernate's SQL-error logger is off.
+- **Unexpected failures** return a generic body with an incident reference that also appears in the log line.
+- **A database outage is `503` with `Retry-After`** (never `401` or "wrong password"), readiness depends on the database and liveness does not, every external call has a timeout, and shutdown is graceful.
+
+## Dependencies and supply chain [built]
+
+- OSV-Scanner checks Maven (including transitive dependencies) and the npm lockfiles of the frontend and the end-to-end tests on every push and pull request and weekly.
+- Policy: no known-vulnerable runtime dependency ships. A dev-only finding with no published fix may carry a dated exception in `frontend/osv-scanner.toml`; the exception expires and forces a new decision.
+- Dependabot proposes weekly updates for Maven, npm, Docker, Compose and GitHub Actions. Lockfiles are committed and installs use `npm ci`.
+- The first scan found critical issues in the embedded web server and in Jackson; they were fixed by upgrading.
+
+## Deployment [built]
+
+- The backend and the database publish no ports; the database is on an internal network; actuator is not reachable through the proxy.
+- Containers run as non-root with read-only filesystems, all capabilities dropped, `no-new-privileges` and memory limits.
+- Compose refuses to start without a database password, public URL, mail host and sender; there are no default secrets. Secure cookies are the default.
+- The proxy overwrites the forwarded client address and trusts forwarded headers only from private networks.
+- The demo stack is **not** a deployment: plain HTTP, one shared password, no real mail.
+
+## Verification [built]
+
+- **Backend:** unit and integration tests against real PostgreSQL, the isolation battery, schema tests for every composite foreign key and append-only table, race tests (two reviewers, assign while removing), logging-policy and outage tests, and architecture rules.
+- **Browser:** end-to-end tests of the main journeys and access rules against the production images, keyboard and reflow checks, and an axe scan of every main screen for WCAG 2.0 to 2.2 level A and AA.
+- **Not covered:** screen-reader and user testing; load testing; penetration testing.
