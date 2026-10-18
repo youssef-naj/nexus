@@ -1,5 +1,4 @@
 import { useState } from "react"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { useOrg } from "@/features/organizations/orgContext"
 import { ApiError } from "@/shared/api/client"
@@ -21,20 +20,23 @@ function serverCommentError(error: unknown): string | null {
 
 /**
  * Submit or review controls. Only the actions the server offered are shown; the server checks
- * every action again. The version sent is the one this page loaded.
+ * every action again. Results are reported to the page (onDone, onFailed) rather than shown here,
+ * because after a conflict the request reloads, this panel may disappear, and the explanation must
+ * not disappear with it.
  */
 export function RequestActionsPanel({
   request,
   onDone,
+  onFailed,
 }: {
   request: RequestDetail
   onDone: (message: string) => void
+  onFailed: (message: string) => void
 }) {
   const { organization } = useOrg()
   const transition = useTransitionRequest(organization.id)
   const [comment, setComment] = useState("")
   const [commentError, setCommentError] = useState<string | null>(null)
-  const [message, setMessage] = useState<string | null>(null)
   const actions = knownActions(request)
 
   if (actions.length === 0) return null
@@ -43,7 +45,6 @@ export function RequestActionsPanel({
   const mustExplain = actions.some((action) => COMMENT_REQUIRED.has(action))
 
   async function run(action: RequestAction) {
-    setMessage(null)
     setCommentError(null)
     const trimmed = comment.trim()
     if (COMMENT_REQUIRED.has(action) && !trimmed) {
@@ -72,7 +73,7 @@ export function RequestActionsPanel({
       if (fieldMessage) {
         setCommentError(fieldMessage)
       } else {
-        setMessage(requestErrorMessage(error))
+        onFailed(requestErrorMessage(error))
       }
     }
   }
@@ -82,11 +83,6 @@ export function RequestActionsPanel({
       <h2 id="actions-heading" className="text-lg font-semibold">
         {submitting ? "Submit" : "Review"}
       </h2>
-      {message && (
-        <Alert variant="destructive">
-          <AlertDescription>{message}</AlertDescription>
-        </Alert>
-      )}
       <TextAreaField
         id="transition-comment"
         label={mustExplain ? "Comment" : "Comment (optional)"}

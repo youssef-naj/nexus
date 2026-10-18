@@ -6,17 +6,18 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useOrg } from "@/features/organizations/orgContext"
 import { ApiError } from "@/shared/api/client"
 import { formatDateTime, formatDueDate } from "@/shared/format"
+import { AssignmentPanel } from "./AssignmentPanel"
 import { categoryLabel } from "./labels"
 import { RequestActionsPanel } from "./RequestActionsPanel"
 import { RequestHistory } from "./RequestHistory"
 import { RequestStatusBadge } from "./RequestStatusBadge"
 import { useRequest } from "./queries"
-import { AssignmentPanel } from "./AssignmentPanel"
 
 export function RequestDetailPage() {
   const { requestId = "" } = useParams()
   const { organization } = useOrg()
   const [notice, setNotice] = useState<string | null>(null)
+  const [problem, setProblem] = useState<string | null>(null)
   const listPath = `/orgs/${organization.id}/requests`
   const request = useRequest(organization.id, requestId)
 
@@ -50,6 +51,17 @@ export function RequestDetailPage() {
   }
   const data = request.data
 
+  // Results live here, not in the panels: after a conflict the request reloads and a panel may
+  // vanish, but the explanation of what happened must stay on screen
+  function succeeded(message: string) {
+    setProblem(null)
+    setNotice(message)
+  }
+  function failed(message: string) {
+    setNotice(null)
+    setProblem(message)
+  }
+
   return (
     <section className="grid max-w-2xl gap-6">
       <div>
@@ -63,6 +75,11 @@ export function RequestDetailPage() {
         </div>
       </div>
 
+      {problem && (
+        <Alert variant="destructive">
+          <AlertDescription>{problem}</AlertDescription>
+        </Alert>
+      )}
       {notice && (
         <Alert role="status">
           <AlertDescription>{notice}</AlertDescription>
@@ -91,8 +108,8 @@ export function RequestDetailPage() {
         <p className="mt-1 whitespace-pre-wrap">{data.description || "No description."}</p>
       </div>
 
-      <RequestActionsPanel request={data} onDone={setNotice} />
-      <AssignmentPanel request={data} onDone={setNotice} />
+      <RequestActionsPanel request={data} onDone={succeeded} onFailed={failed} />
+      <AssignmentPanel request={data} onDone={succeeded} onFailed={failed} />
       <RequestHistory orgId={organization.id} requestId={data.id} />
     </section>
   )

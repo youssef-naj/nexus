@@ -1,5 +1,4 @@
 import { useState } from "react"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { useOrg } from "@/features/organizations/orgContext"
@@ -18,21 +17,23 @@ function assignmentErrorMessage(error: unknown): string {
 
 /**
  * Assign a submitted request to a reviewer. Shown only when the server says this viewer may
- * assign; the server checks again. Assignment is advisory: any reviewer can still decide.
+ * assign; the server checks again. Assignment is advisory: any reviewer can still decide. Results
+ * go to the page (onDone, onFailed): after a conflict this panel may disappear.
  */
 export function AssignmentPanel({
   request,
   onDone,
+  onFailed,
 }: {
   request: RequestDetail
   onDone: (message: string) => void
+  onFailed: (message: string) => void
 }) {
   const { organization } = useOrg()
   const reviewers = useReviewers(organization.id, request.assignable)
   const assign = useAssignRequest(organization.id)
   const unassign = useUnassignRequest(organization.id)
   const [selected, setSelected] = useState("")
-  const [message, setMessage] = useState<string | null>(null)
 
   if (!request.assignable) return null
 
@@ -46,13 +47,12 @@ export function AssignmentPanel({
   const busy = assign.isPending || unassign.isPending
 
   async function run(action: () => Promise<unknown>, success: string) {
-    setMessage(null)
     try {
       await action()
       setSelected("")
       onDone(success)
     } catch (error) {
-      setMessage(assignmentErrorMessage(error))
+      onFailed(assignmentErrorMessage(error))
     }
   }
 
@@ -72,11 +72,6 @@ export function AssignmentPanel({
         {request.assigneeName ? `Assigned to ${request.assigneeName}.` : "Not assigned yet."} Any
         reviewer can still decide on this request.
       </p>
-      {message && (
-        <Alert variant="destructive">
-          <AlertDescription>{message}</AlertDescription>
-        </Alert>
-      )}
       {reviewers.isError && (
         <p className="text-sm text-destructive">Couldn't load the reviewers.</p>
       )}

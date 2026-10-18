@@ -19,6 +19,7 @@ describe("ScrollRegion", () => {
     const region = screen.getByRole("region", { name: "Requests" })
     expect(region).toHaveAttribute("tabindex", "0")
     expect(region).toHaveClass("overflow-x-auto")
+    expect(region.className).toContain("[&>div]:overflow-visible")
     expect(screen.getByText("wide content")).toBeInTheDocument()
   })
 })
