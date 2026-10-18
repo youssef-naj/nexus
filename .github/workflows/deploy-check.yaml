@@ -11,9 +11,9 @@ permissions:
 
 jobs:
   stack:
-    name: Build images, start the stack, smoke test
+    name: Build images, start the stack, smoke test, end-to-end and accessibility tests
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 40
     env:
       COMPOSE: docker compose --env-file .env.demo -f compose.prod.yaml -f compose.demo.yaml
     steps:
@@ -27,6 +27,41 @@ jobs:
 
       - name: Smoke test
         run: bash scripts/smoke.sh
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+
+      - name: Seed the demo data
+        run: node scripts/seed-demo.mjs
+
+      # The platform operator role is granted when the backend starts
+      - name: Restart the backend so the platform operator role applies
+        run: |
+          $COMPOSE restart backend
+          $COMPOSE up -d --wait --wait-timeout 300
+
+      - name: Install the end-to-end tests
+        working-directory: e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: End-to-end and accessibility tests
+        working-directory: e2e
+        run: npx playwright test
+
+      - name: Keep the report and traces when something failed
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: |
+            e2e/playwright-report/
+            e2e/test-results/
+          retention-days: 7
 
       - name: Show the logs when something failed
         if: failure()
