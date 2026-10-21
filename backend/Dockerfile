@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ---- build -------------------------------------------------------------------------------
-FROM eclipse-temurin:21-jdk-noble AS build
+FROM eclipse-temurin:25-jdk-noble AS build
 WORKDIR /build
 COPY .mvn/ .mvn/
 COPY mvnw pom.xml ./
@@ -14,7 +14,7 @@ RUN --mount=type=cache,target=/root/.m2 \
  && java -Djarmode=tools -jar application.jar extract --destination extracted
 
 # ---- runtime -----------------------------------------------------------------------------
-FROM eclipse-temurin:21-jre-noble
+FROM eclipse-temurin:25-jre-noble
 RUN groupadd --system --gid 10001 nexus \
  && useradd --system --uid 10001 --gid 10001 --no-create-home --shell /usr/sbin/nologin nexus
 WORKDIR /app
